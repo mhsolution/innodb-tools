@@ -12,27 +12,43 @@
 #include "error.h"
 #include "common.h"
 
+static time_t timestamp = 0;
+
+
+void save_fields_info(char *fname, page_t *page) {
+	FILE *info;
+	rec_t *free_rec;
+	ulint fields_number, i;
+	
+	// Open file and get first free record
+	info = fopen(fname, "wt+");
+	free_rec = page + page_header_get_field(page, PAGE_FREE);
+
+	// Print fields number and print it
+	fields_number = rec_get_n_fields(free_rec);
+	fprintf(info, "%lu\n", fields_number);
+	
+	// Save fields lengths
+	for (i = 0; i < fields_number; i++) {
+		fprintf(info, "%lu\n", rec_get_nth_field_len(free_rec, i));
+	}
+	
+	fclose(info);
+}
+
 void process_ibpage(page_t *page) {
 	ulint page_id;
 	dulint index_id;
 	char tmp[256];
-	int fn;
-	static time_t timestamp = 0;
+	int fn, table_dir_res;
 	
 	// Get page info
 	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
 	index_id = mach_read_from_8(page + PAGE_HEADER + PAGE_INDEX_ID);
-	
-	printf("Read page #%lu with index id = %lu-%lu\n", page_id, index_id.high, index_id.low);
-	
-	// Create pages directory
-	if (!timestamp) timestamp = time(0);
-	sprintf(tmp, "pages-%u", timestamp);
-	mkdir(tmp, 0755);
-	
+			
 	// Create table directory
 	sprintf(tmp, "pages-%u/%lu-%lu", timestamp, index_id.high, index_id.low);
-	mkdir(tmp, 0755);
+	table_dir_res = mkdir(tmp, 0755);
 	
 	// Compose page file_name
 	sprintf(tmp, "pages-%u/%lu-%lu/%08lu.page", timestamp, index_id.high, index_id.low, page_id);
@@ -44,13 +60,25 @@ void process_ibpage(page_t *page) {
 	if (!fn) error("Can't open file to save page!");
 	write(fn, page, UNIV_PAGE_SIZE);
 	close(fn);
+	
+	// Create fields info file (if directory did not exist yet)
+	if (table_dir_res != EEXIST) {
+    	sprintf(tmp, "pages-%u/%lu-%lu/fields.info", timestamp, index_id.high, index_id.low);
+	    save_fields_info(tmp, page);	
+	}
 }
 
 void process_ibfile(int fn) {
 	int read_bytes;
 	page_t *page = malloc(UNIV_PAGE_SIZE);
+	char tmp[20];
 	
 	if (!page) error("Can't allocate page buffer!");
+
+	// Create pages directory
+	timestamp = time(0);
+	sprintf(tmp, "pages-%u", timestamp);
+	mkdir(tmp, 0755);
 	
 	printf("Read data from fn=%d...\n", fn);
 
