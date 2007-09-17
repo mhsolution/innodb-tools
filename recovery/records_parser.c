@@ -11,22 +11,16 @@
 #include "univ.i"
 #include "page0page.h"
 #include "rem0rec.h"
+
 #include "error.h"
 #include "common.h"
 
-page_t* read_ibpage(char *file_name) {
-	page_t *page;
+void read_ibpage(char *file_name, page_t *page) {
 	int fn;
-
-	page = malloc(UNIV_PAGE_SIZE);
-	if (!page) error("Can't alloc page buffer!");
 	
 	fn = open(file_name, O_RDONLY, 0);
 	if (!fn) error("Can't open page file!");
-	
 	if (read(fn, page, UNIV_PAGE_SIZE) != UNIV_PAGE_SIZE) error("Can't read full page!");
-
-	return page;
 }
 
 void process_ibrec(rec_t *rec, page_t *page) {
@@ -91,14 +85,21 @@ void process_pages_dir(char *dir_name) {
 	char full_name[250];
 	page_t *page;
 
+	// Alloc page buffer
+	page = malloc(UNIV_PAGE_SIZE);
+	if (!page) error("Can't alloc page buffer!");
+
+	// Open table directory
 	dir = opendir(dir_name);
 	if (!dir) error("Can't open directory!");
 	
 	printf("Reading directory: %s\n", dir_name);
-	
+
+	// Scan the entire dir
 	while ((entry = readdir(dir)) != NULL) {
 		ext = strstr(entry->d_name, ".page");
 		
+		// Skip all files excape a files with .page extension
 		if (entry->d_type != DT_REG || entry->d_name + entry->d_namlen - ext > 5) {
 			printf("Skipping dir entry: %s\n", entry->d_name);
 			continue;
@@ -106,13 +107,17 @@ void process_pages_dir(char *dir_name) {
 		
 		printf("Processing page file: %s\n", entry->d_name);
 
+		// Compose full file path
 		sprintf(full_name, "%s/%s", dir_name, entry->d_name);
-		page = read_ibpage(full_name);
+		
+		// Read and process the page
+		read_ibpage(full_name, page);
 		process_ibpage(page);
-		free(page);
 	}
 	
+	// Free resources
 	closedir(dir);
+	free(page);
 }
 
 int main(int argc, char **argv) {

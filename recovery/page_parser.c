@@ -19,27 +19,29 @@ void process_ibpage(page_t *page) {
 	int fn;
 	static time_t timestamp = 0;
 	
+	// Get page info
 	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
 	index_id = mach_read_from_8(page + PAGE_HEADER + PAGE_INDEX_ID);
 	
 	printf("Read page #%lu with index id = %lu-%lu\n", page_id, index_id.high, index_id.low);
 	
-	if (page_id == 0) return;
-	
+	// Create pages directory
 	if (!timestamp) timestamp = time(0);
 	sprintf(tmp, "pages-%u", timestamp);
 	mkdir(tmp, 0755);
 	
+	// Create table directory
 	sprintf(tmp, "pages-%u/%lu-%lu", timestamp, index_id.high, index_id.low);
 	mkdir(tmp, 0755);
 	
+	// Compose page file_name
 	sprintf(tmp, "pages-%u/%lu-%lu/%08lu.page", timestamp, index_id.high, index_id.low, page_id);
 	
 	printf("Read page #%lu.. saving it to %s\n", page_id, tmp);
-	
+
+	// Save page data
 	fn = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (!fn) error("Can't open file to save page!");
-	
 	write(fn, page, UNIV_PAGE_SIZE);
 	close(fn);
 }
@@ -52,6 +54,7 @@ void process_ibfile(int fn) {
 	
 	printf("Read data from fn=%d...\n", fn);
 
+	// Read pages to the end of file
 	while ((read_bytes = read(fn, page, UNIV_PAGE_SIZE)) == UNIV_PAGE_SIZE) {
 		if (page_is_interesting(page)) process_ibpage(page);
 	}
@@ -61,9 +64,9 @@ int open_ibfile(char *fname) {
 	struct stat fstat;
 	int fn;
 
+	// Disallow Skip non-regular files
 	printf("Opening file: %s\n", fname);
 	if (stat(fname, &fstat) != 0 || (fstat.st_mode & S_IFREG) != S_IFREG) error("Invalid file specified!");
-
 	fn = open(fname, O_RDONLY, 0);
 	if (!fn) error("Can't open file!");
 	
