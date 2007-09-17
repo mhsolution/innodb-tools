@@ -1,0 +1,84 @@
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <time.h>
+
+#include "univ.i"
+#include "page0page.h"
+
+#include "error.h"
+#include "common.h"
+
+void process_ibpage(page_t *page) {
+	ulint page_id;
+	dulint index_id;
+	char tmp[256];
+	int fn;
+	static time_t timestamp = 0;
+	
+	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
+	index_id = mach_read_from_8(page + PAGE_HEADER + PAGE_INDEX_ID);
+	
+	printf("Read page #%lu with index id = %lu-%lu\n", page_id, index_id.high, index_id.low);
+	
+	if (page_id == 0) return;
+	
+	if (!timestamp) timestamp = time(0);
+	sprintf(tmp, "pages-%u", timestamp);
+	mkdir(tmp, 0755);
+	
+	sprintf(tmp, "pages-%u/%lu-%lu", timestamp, index_id.high, index_id.low);
+	mkdir(tmp, 0755);
+	
+	sprintf(tmp, "pages-%u/%lu-%lu/%08lu.page", timestamp, index_id.high, index_id.low, page_id);
+	
+	printf("Read page #%lu.. saving it to %s\n", page_id, tmp);
+	
+	fn = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (!fn) error("Can't open file to save page!");
+	
+	write(fn, page, UNIV_PAGE_SIZE);
+	close(fn);
+}
+
+void process_ibfile(int fn) {
+	int read_bytes;
+	page_t *page = malloc(UNIV_PAGE_SIZE);
+	
+	if (!page) error("Can't allocate page buffer!");
+	
+	printf("Read data from fn=%d...\n", fn);
+
+	while ((read_bytes = read(fn, page, UNIV_PAGE_SIZE)) == UNIV_PAGE_SIZE) {
+		if (page_is_interesting(page)) process_ibpage(page);
+	}
+}
+
+int open_ibfile(char *fname) {
+	struct stat fstat;
+	int fn;
+
+	printf("Opening file: %s\n", fname);
+	if (stat(fname, &fstat) != 0 || (fstat.st_mode & S_IFREG) != S_IFREG) error("Invalid file specified!");
+
+	fn = open(fname, O_RDONLY, 0);
+	if (!fn) error("Can't open file!");
+	
+	return fn;
+}
+
+int main(int argc, char **argv) {
+	int fn;
+
+	if (argc < 2) error("Usage: ./page_parser <innodb_datafile>");
+	
+	fn = open_ibfile(argv[1]);
+	process_ibfile(fn);
+	close(fn);
+	
+	return 0;
+}
+

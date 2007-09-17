@@ -1,0 +1,20 @@
+Ho to use it?
+~~~~~~~~~~~~~
+
+Here are two tools in this package:
+
+* page_parser - to parse am innodb tablespace and save all pages splitted by table_id.
+* records_parser - to take all files from splitted tablespace and retrieve records from them.
+
+To recover innodb data you need to start page_parser with innodb tablespace file as a parameter.
+As the result you'll get a directory with pages (pages-XXXXXXX).
+
+Then you'll need to choose what table to parse and run records_parser with a table directory as a parameter.
+
+
+How to build it
+~~~~~~~~~~~~~~~
+
+Compile mysql 5.0.45 on your server. Then take libut.a file from innobase/ut/ and place it to current directory.
+Then run make command and you'll get two binaries.
+
