@@ -34,6 +34,8 @@ void process_ibrec(rec_t *rec, page_t *page) {
 	
 	data_size = rec_get_data_size(rec);
 	printf("Data size: %lu\n", data_size);
+	
+	printf("Offset fields size: %d\n", rec_get_1byte_offs_flag(rec));
 
 	info_bits = rec_get_info_bits(rec);
 	for(i = 0; i < fields_number; i++) {
@@ -68,7 +70,7 @@ void process_ibpage(page_t *page) {
 	while(offset > 0) {
 		// Get record pointer
 		free_rec = page + offset;
-		printf("PAGE%lu: Found free record: %p (offset = %lu)\n", page_id, free_rec, offset);
+		printf("\nPAGE%lu: Found free record: %p (offset = %lu)\n", page_id, free_rec, offset);
 
 		// Process record found
 		process_ibrec(free_rec, page);
