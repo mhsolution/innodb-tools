@@ -36,7 +36,8 @@ void process_ibrec(rec_t *rec, page_t *page) {
 	printf("Data size: %lu\n", data_size);
 	
 	printf("Offset fields size: %d\n", rec_get_1byte_offs_flag(rec));
-
+	printf("Deleted flag: %d\n", rec_get_deleted_flag(rec));
+	
 	info_bits = rec_get_info_bits(rec);
 	for(i = 0; i < fields_number; i++) {
 		ulint len;

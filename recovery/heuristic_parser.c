@@ -14,22 +14,7 @@
 
 #include "error.h"
 #include "common.h"
-
-// Table definitions
-typedef struct table_def {
-	char *name;
-	int fields_count;
-	int data_min_size;
-	int data_max_size;
-} table_def_t;
-
-table_def_t table_definitions[] = {
-	{ "test_int", 3, 4+6+7, 4+6+7 },
-	{ "test_string", 3+1, 6+6+7+32, 6+6+7+32 },
-	{ "test_string2", 3+2, 6+6+7+10+5, 6+6+7+10+5 }
-};
-
-int table_definitions_cnt = 3;
+#include "table_defs.h"
 
 /*******************************************************************/
 void read_ibpage(char *file_name, page_t *page) {
@@ -41,34 +26,143 @@ void read_ibpage(char *file_name, page_t *page) {
 }
 
 /*******************************************************************/
-ulint process_ibrec(rec_t *rec, page_t *page) {
+inline ulonglong make_ulonglong(dulint x) {
+	ulonglong lx = x.high;
+	lx <<= 32;
+	lx += x.low;
+	return lx;
+}
+
+/*******************************************************************/
+inline longlong make_longlong(dulint x) {
+	longlong lx = x.high;
+	lx <<= 32;
+	lx += x.low;
+	return lx;
+}
+
+/*******************************************************************/
+void print_datetime(ulonglong ldate) {
+	int year, month, day, hour, min, sec;
+	
+	ldate &= ~(1ULL << 63);
+	
+	sec = ldate % 100; ldate /= 100;
+	min = ldate % 100; ldate /= 100;
+	hour = ldate % 100; ldate /= 100;
+	day = ldate % 100; ldate /= 100;
+	month = ldate % 100; ldate /= 100;
+	year = ldate % 10000;
+	
+	printf("\"%04u-%02u-%02u %02u:%02u:%02u\"", year, month, day, hour, min, sec);
+}
+
+/*******************************************************************/
+void print_date(ulonglong ldate) {
+	int year, month, day;
+
+	ldate &= ~(1ULL << 63);
+	
+	ldate /= 100;
+	ldate /= 100;
+	ldate /= 100;
+	day = ldate % 100; ldate /= 100;
+	month = ldate % 100; ldate /= 100;
+	year = ldate % 10000;
+	
+	printf("\"%04u-%02u-%02u\"", year, month, day);
+}
+
+
+/*******************************************************************/
+void print_field_value(byte *value, ulint len, field_def_t *field) {
+	int i;
+	
+//	printf("%s=", field->name);
+	
+	switch (field->type) {
+		case FT_INTERNAL:
+    		break;
+
+		case FT_CHAR:
+    		printf("\"");
+		    for(i = 0; i < len; i++) {
+				if (value[i] == '"') printf("\\\"");
+				else printf("%c", value[i]);
+    		}
+    		printf("\"");
+			break;
+
+		case FT_UINT:
+			switch (field->max_length) {
+				case 1: printf("%u", mach_read_from_1(value)); break;
+				case 2: printf("%u", mach_read_from_2(value)); break;
+				case 4: printf("%lu", mach_read_from_4(value)); break;
+				case 8: printf("%llu", make_ulonglong(mach_read_from_8(value))); break;
+				default: printf("uint_undef(%d)", field->max_length);
+			}
+			break;
+
+		case FT_INT:
+			switch (field->max_length) {
+				case 1: printf("%d", mach_read_from_1(value)); break;
+				case 2: printf("%i", mach_read_from_2(value)); break;
+				case 4: printf("%li", mach_read_from_4(value)); break;
+				case 8: printf("%lli", make_longlong(mach_read_from_8(value))); break;
+				default: printf("int_undef(%d)", field->max_length);
+			}
+			break;
+
+		case FT_DATETIME:
+			print_datetime(make_longlong(mach_read_from_8(value)));
+			break;
+
+		case FT_DATE:
+			print_date(make_longlong(mach_read_from_8(value)));
+			break;
+
+		default:
+    		printf("undef(%d)", field->type);
+	}
+
+//	printf(" ("); ut_print_buf(stdout, value, len); printf(" )");
+}
+
+/*******************************************************************/
+ulint process_ibrec(rec_t *rec, page_t *page, table_def_t *table) {
 	ulint info_bits, data_size;
 	int fields_number, i;
+
+	// Print table name
+	printf("%s\t", table->name);
 	
-	printf("Processing record %p\n", rec);
+//	printf("Processing record %p\n", rec);
 	
 	fields_number = rec_get_n_fields(rec);
-	printf("Fields number: %lu\n", fields_number);
+//	printf("Fields number: %lu\n", fields_number);
 	
 	data_size = rec_get_data_size(rec);
-	printf("Data size: %lu\n", data_size);
 
-	printf("Deleted flag: %d\n", rec_get_deleted_flag(rec));
+//	printf("Data size: %lu\n", data_size);
+//	printf("Deleted flag: %d\n", rec_get_deleted_flag(rec));
 
 	info_bits = rec_get_info_bits(rec);
 	for(i = 0; i < fields_number; i++) {
 		ulint len;
 		byte *field;
 		
+		if (table->fields[i].type == FT_INTERNAL) continue;
+		
 		field = rec_get_nth_field(rec, i, &len);
-		if (len != UNIV_SQL_NULL) {
-    		printf("- Field #%d. Size = %lu, Ptr = %p, Offset = %lu: ", i, len, field, field-page);
-    		ut_print_buf(stdout, field, len);
+		if (len == UNIV_SQL_NULL) {
+			printf("NULL");
 		} else {
-			printf("- Field #%d. Size = NULL, Ptr = NULL, Offset = NULL: NULL", i, len, field, field-page);
+			print_field_value(field, len, &(table->fields[i]));
 		}
-		printf("\n");
+		
+		if (i < fields_number - 1) printf("\t");
 	}
+	printf("\n");
 
 	return data_size; //point to the next possible record's start
 }
@@ -76,13 +170,11 @@ ulint process_ibrec(rec_t *rec, page_t *page) {
 /*******************************************************************
 Validates the consistency of a physical record. */
 
-ulint rec_dummy; // to prevent compiler warnings
-ibool ibrec_validate(rec_t* rec) {
+ibool ibrec_validate(page_t *page, rec_t* rec) {
 	byte*	data;
 	ulint	len;
 	ulint	n_fields;
 	ulint	len_sum	= 0;
-	ulint	sum	= 0;
 	ulint	i;
 
 	if (!rec) return FALSE;
@@ -97,7 +189,7 @@ ibool ibrec_validate(rec_t* rec) {
 
 		if (len != UNIV_SQL_NULL) {
 			len_sum += len;
-			sum += *(data + len - 1);  // dereference the end of the field to cause a memory trap if possible
+			if (data + len - 1 > page + UNIV_PAGE_SIZE) return FALSE;
 		} else {
 			len_sum += rec_get_nth_field_size(rec, i);
 		}
@@ -107,36 +199,62 @@ ibool ibrec_validate(rec_t* rec) {
 		return FALSE;
 	}	
 	
-	rec_dummy = sum; // This is here only to fool the compiler 
-
 	return TRUE;
 }
 
 /*******************************************************************/
-rec_t* check_for_a_record(rec_t *rec_start, ulint offsets_size, table_def_t *table) {
+ibool check_fields_sizes(rec_t *rec, table_def_t *table) {
+	int i;
+	
+	// check every field
+	for(i = 0; i < table->fields_count; i++) {
+		ulint len;
+		byte *field;
+		
+		field = rec_get_nth_field(rec, i, &len);
+		if (len < table->fields[i].min_length || len > table->fields[i].max_length) return FALSE;
+		//FIXME: need to check data ranges
+	}
+	
+	return TRUE;
+}
+
+/*******************************************************************/
+rec_t* check_for_a_record(page_t *page, rec_t *rec_start, ulint offsets_size, table_def_t *table) {
 	rec_t *rec;
 	int data_size;
 
 	// Get a possible record origin
 	rec = rec_start + offsets_size * table->fields_count + REC_N_EXTRA_BYTES;
 
+	// Check record bounds
+	if (rec - page >= UNIV_PAGE_SIZE - table->data_min_size - 1) return FALSE;
+//	printf("0 ");
+
 	// Skip if bit count flag is incorrect
 	if (rec_get_1byte_offs_flag(rec) != (offsets_size == 1)) return FALSE;
+//	printf("1 ");
 
 	// Check fields count
 	if (rec_get_n_fields(rec) != table->fields_count) return FALSE;
+//	printf("2 ");
 	
 	// Skip non-deleted records
-	if (!rec_get_deleted_flag(rec)) return FALSE;
+//	if (!rec_get_deleted_flag(rec)) return FALSE;
+//	printf("3 ");
 
 	// Check the record's data size
 	data_size = rec_get_data_size(rec);
 	if (data_size > table->data_max_size || data_size < table->data_min_size) return FALSE;
+//	printf("4 ");
 
 	// Check the record for validity by innodb's function
-	if (!ibrec_validate(rec)) return FALSE;
+	if (!ibrec_validate(page, rec)) return FALSE;
+//	printf("5 ");
 	
-	// FIXME: do we need to check our field values?
+	// Check fields sizes and (later) field values
+	if (!check_fields_sizes(rec, table)) return FALSE;
+//	printf("6 ");
 	
 	// This record could be valid and useful
 	return rec;
@@ -149,15 +267,15 @@ void process_ibpage(page_t *page) {
 	ulint offset, rec_size, i;
 	
 	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
-	printf("Page id: %lu\n", page_id);
+//	printf("Page id: %lu\n", page_id);
 
 	// Find possible data area start point (end of supremum + 6 bytes of extra + at least 3 offsets)
 	offset = 0; 
-	printf("Starting offset: %lu\n", offset);
+//	printf("Starting offset: %lu\n", offset);
 	
 	// Walk through all possible positions to the end of page 
 	// (start of directory - extra bytes of the last rec)
-	while (offset < UNIV_PAGE_SIZE - 6 - 1) {
+	while (offset < UNIV_PAGE_SIZE - REC_N_EXTRA_BYTES - 1) {
 		// Get record pointer
 		rec_start = page + offset;
 		rec = 0;
@@ -167,18 +285,26 @@ void process_ibpage(page_t *page) {
 			table_def_t table = table_definitions[i];
 
 			// check for a record with 1 byte offsets
-			rec = check_for_a_record(rec_start, 1, &table);
+//			printf("%s@%lu[1]: ", table.name, offset);
+			rec = check_for_a_record(page, rec_start, 1, &table);
+//			printf("\n");
+			
 			if (rec) {
-				printf("PAGE%lu: Found a table %s record with 1-byte offsets: %p (offset = %lu)\n", page_id, table.name, rec, rec-page);
-				offset += process_ibrec(rec, page);
+//				printf("---------------------------------------------------\n"
+//				       "PAGE%lu: Found a table %s record with 1-byte offsets: %p (offset = %lu)\n", page_id, table.name, rec, rec-page);
+				offset += process_ibrec(rec, page, &table);
 				break;
 			}
 
 			// check for a record with 2 byte offsets
-			rec = check_for_a_record(rec_start, 2, &table);
+//			printf("%s@%lu[2]: ", table.name, offset);
+			rec = check_for_a_record(page, rec_start, 2, &table);
+//			printf("\n");
+
 			if (rec) {
-				printf("PAGE%lu: Found a table %s record with 2-byte offsets: %p (offset = %lu)\n", page_id, table.name, rec, rec-page);
-				offset += process_ibrec(rec, page);
+//				printf("---------------------------------------------------\n"
+//				       "PAGE%lu: Found a table %s record with 2-byte offsets: %p (offset = %lu)\n", page_id, table.name, rec, rec-page);
+				offset += process_ibrec(rec, page, &table);
 				break;
 			}
 		}
@@ -189,56 +315,66 @@ void process_ibpage(page_t *page) {
 	
 }
 
-/*******************************************************************/
-void process_pages_dir(char *dir_name) {
-	DIR *dir;
-	struct dirent *entry;
-	char *ext;
-	char full_name[250];
-	page_t *page;
+void init_table_defs() {
+	int i, j;
 
-	// Alloc page buffer
-	page = malloc(UNIV_PAGE_SIZE);
-	if (!page) error("Can't alloc page buffer!");
+	for (i = 0; i < table_definitions_cnt; i++) {
+		table_def_t *table = &(table_definitions[i]);
 
-	// Open table directory
-	dir = opendir(dir_name);
-	if (!dir) error("Can't open directory!");
-	
-	printf("Reading directory: %s\n", dir_name);
-
-	// Scan the entire dir
-	while ((entry = readdir(dir)) != NULL) {
-		ext = strstr(entry->d_name, ".page");
-		
-		// Skip all files excape a files with .page extension
-		if (entry->d_type != DT_REG || entry->d_name + entry->d_namlen - ext > 5) {
-			printf("Skipping dir entry: %s\n", entry->d_name);
-			continue;
+		for(j = 0; j < MAX_TABLE_FIELDS; j++) {
+			if (table->fields[j].type == FT_NONE) {
+				table->fields_count = j;
+				break;
+			}
+			table->data_min_size += table->fields[j].min_length;
+			table->data_max_size += table->fields[j].max_length;
 		}
-		
-		printf("Processing page file: %s\n", entry->d_name);
-
-		// Compose full file path
-		sprintf(full_name, "%s/%s", dir_name, entry->d_name);
-		
-		// Read and process the page
-		read_ibpage(full_name, page);
-		process_ibpage(page);
 	}
+}
+
+/*******************************************************************/
+void process_ibfile(int fn) {
+	int read_bytes;
+	page_t *page = malloc(UNIV_PAGE_SIZE);
+	char tmp[20];
 	
-	// Free resources
-	closedir(dir);
-	free(page);
+	if (!page) error("Can't allocate page buffer!");
+
+	init_table_defs();
+
+//	printf("Read data from fn=%d...\n", fn);
+
+	// Read pages to the end of file
+	while ((read_bytes = read(fn, page, UNIV_PAGE_SIZE)) == UNIV_PAGE_SIZE) {
+		if (page_is_interesting(page)) process_ibpage(page);
+	}
+}
+
+/*******************************************************************/
+int open_ibfile(char *fname) {
+	struct stat fstat;
+	int fn;
+
+	// Disallow Skip non-regular files
+//	printf("Opening file: %s\n", fname);
+	if (stat(fname, &fstat) != 0 || (fstat.st_mode & S_IFREG) != S_IFREG) error("Invalid file specified!");
+	fn = open(fname, O_RDONLY, 0);
+	if (!fn) error("Can't open file!");
+	
+	return fn;
 }
 
 /*******************************************************************/
 int main(int argc, char **argv) {
-	if (argc < 2) error("Usage: ./records_parser <innodb_pages_dir>");
+	int fn;
 
-	process_pages_dir(argv[1]);
+	setbuf(stdout, NULL);
+
+	if (argc < 2) error("Usage: ./heuristic_parser <innodb_datafile>");
 	
-	printf("Processing finished successfully!\n\n");
+	fn = open_ibfile(argv[1]);
+	process_ibfile(fn);
+	close(fn);
 	
 	return 0;
 }

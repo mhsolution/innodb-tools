@@ -14,7 +14,6 @@
 
 static time_t timestamp = 0;
 
-
 void save_fields_info(char *fname, page_t *page) {
 	FILE *info;
 	rec_t *free_rec;
