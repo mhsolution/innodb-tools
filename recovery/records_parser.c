@@ -123,6 +123,8 @@ void process_pages_dir(char *dir_name) {
 	free(page);
 }
 
+bool deleted_pages_only = 0;
+
 int main(int argc, char **argv) {
 	if (argc < 2) error("Usage: ./records_parser <innodb_pages_dir>");
 

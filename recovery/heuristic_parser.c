@@ -16,6 +16,11 @@
 #include "common.h"
 #include "table_defs.h"
 
+// Global flags from getopt
+bool deleted_pages_only = 0;
+bool deleted_records_only = 0;
+
+
 /*******************************************************************/
 void read_ibpage(char *file_name, page_t *page) {
 	int fn;
@@ -88,6 +93,7 @@ void print_field_value(byte *value, ulint len, field_def_t *field) {
     		printf("\"");
 		    for(i = 0; i < len; i++) {
 				if (value[i] == '"') printf("\\\"");
+				else if (value[i] == '\n') printf("\\n");
 				else printf("%c", value[i]);
     		}
     		printf("\"");
@@ -105,12 +111,20 @@ void print_field_value(byte *value, ulint len, field_def_t *field) {
 
 		case FT_INT:
 			switch (field->max_length) {
-				case 1: printf("%d", mach_read_from_1(value)); break;
-				case 2: printf("%i", mach_read_from_2(value)); break;
-				case 4: printf("%li", mach_read_from_4(value)); break;
-				case 8: printf("%lli", make_longlong(mach_read_from_8(value))); break;
+				case 1: printf("%d", mach_read_from_1(value) ^ 1<<7); break;
+				case 2: printf("%i", mach_read_from_2(value) ^ 1<<15); break;
+				case 4: printf("%li", mach_read_from_4(value) ^ 1L<<31); break;
+				case 8: printf("%lli", make_longlong(mach_read_from_8(value)) ^ 1LL << 63); break;
 				default: printf("int_undef(%d)", field->max_length);
 			}
+			break;
+
+		case FT_FLOAT:
+			printf("%f", mach_float_read(value)); break;
+			break;
+
+		case FT_DOUBLE:
+			printf("%lf", mach_double_read(value)); break;
 			break;
 
 		case FT_DATETIME:
@@ -203,6 +217,33 @@ ibool ibrec_validate(page_t *page, rec_t* rec) {
 }
 
 /*******************************************************************/
+ibool check_datetime(ulonglong ldate) {
+	int year, month, day, hour, min, sec;
+	
+	ldate &= ~(1ULL << 63);
+	
+	sec = ldate % 100; ldate /= 100;
+	if (sec < 0 || sec > 59) return FALSE;
+	
+	min = ldate % 100; ldate /= 100;
+	if (min < 0 || min > 59) return FALSE;
+	
+	hour = ldate % 100; ldate /= 100;
+	if (hour < 0 || hour > 23) return FALSE;
+
+	day = ldate % 100; ldate /= 100;
+	if (day < 0 || day > 31) return FALSE;
+
+	month = ldate % 100; ldate /= 100;
+	if (month < 1 || month > 12) return FALSE;
+
+	year = ldate % 10000;
+	if (year < 0 || year > 2099) return FALSE;
+
+	return TRUE;
+}
+
+/*******************************************************************/
 ibool check_fields_sizes(rec_t *rec, table_def_t *table) {
 	int i;
 	
@@ -212,10 +253,17 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table) {
 		byte *field;
 		
 		field = rec_get_nth_field(rec, i, &len);
+//		printf("Checking field #%d/%d, %s[%lu, %lu] vs %lu...", i, table->fields_count, table->fields[i].name, table->fields[i].min_length, table->fields[i].max_length, len);
+		if (len == UNIV_SQL_NULL && table->fields[i].min_length == 0) continue;
 		if (len < table->fields[i].min_length || len > table->fields[i].max_length) return FALSE;
-		//FIXME: need to check data ranges
+
+		//FIXME: need to check more data ranges
+		if (table->fields[i].type == FT_DATETIME || table->fields[i].type == FT_DATE) {
+			if (!check_datetime(make_longlong(mach_read_from_8(field)))) return FALSE;
+		}
 	}
 	
+//	printf("\n");
 	return TRUE;
 }
 
@@ -240,7 +288,7 @@ rec_t* check_for_a_record(page_t *page, rec_t *rec_start, ulint offsets_size, ta
 //	printf("2 ");
 	
 	// Skip non-deleted records
-//	if (!rec_get_deleted_flag(rec)) return FALSE;
+	if (deleted_records_only && !rec_get_deleted_flag(rec)) return FALSE;
 //	printf("3 ");
 
 	// Check the record's data size
@@ -364,17 +412,47 @@ int open_ibfile(char *fname) {
 	return fn;
 }
 
+void usage() {
+	error(
+	  "Usage: ./heuristic_parser [-dDh] -f <innodb_datafile>\n"
+	  "  Where\n"
+	  "    -h  -- Print this help\n"
+	  "    -d  -- Process only those pages which potentially could have deleted records (default = NO)\n"
+	  "    -D  -- Recover deleted rows only (default = NO)\n\n"
+	);
+}
+
 /*******************************************************************/
 int main(int argc, char **argv) {
-	int fn;
+	int fn = 0, ch;
 
 	setbuf(stdout, NULL);
 
-	if (argc < 2) error("Usage: ./heuristic_parser <innodb_datafile>");
-	
-	fn = open_ibfile(argv[1]);
-	process_ibfile(fn);
-	close(fn);
+	while ((ch = getopt(argc, argv, "hdDf:")) != -1) {
+		switch (ch) {
+			case 'd':
+				deleted_pages_only = 1;
+				break;
+
+			case 'D':
+			    deleted_records_only = 1;
+				break;
+
+			case 'f':
+				fn = open_ibfile(optarg);
+				break;
+
+			default:
+			case '?':
+			case 'h':
+				usage();
+		}
+	}
+
+	if (fn != 0) {
+		process_ibfile(fn);
+		close(fn);
+	} else usage();
 	
 	return 0;
 }

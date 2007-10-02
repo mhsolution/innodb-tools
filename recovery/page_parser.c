@@ -100,12 +100,49 @@ int open_ibfile(char *fname) {
 	return fn;
 }
 
-int main(int argc, char **argv) {
-	int fn;
+void usage() {
+	error(
+	  "Usage: ./page_parser [-dDh] -f <innodb_datafile>\n"
+	  "  Where\n"
+	  "    -h  -- Print this help\n"
+	  "    -d  -- Process only those pages which potentially could have deleted records (default = NO)\n"
+	  "    -D  -- Recover deleted rows only (default = NO)\n\n"
+	);
+}
 
-	if (argc < 2) error("Usage: ./page_parser <innodb_datafile>");
+// Global flags from getopt
+bool deleted_pages_only = 0;
+bool deleted_records_only = 0;
+
+int main(int argc, char **argv) {
+	int fn = 0, ch;
+
+	while ((ch = getopt(argc, argv, "hdDf:")) != -1) {
+		switch (ch) {
+			case 'd':
+				deleted_pages_only = 1;
+				break;
+
+			case 'D':
+			    deleted_records_only = 1;
+				break;
+
+			case 'f':
+				fn = open_ibfile(optarg);
+				break;
+
+			default:
+			case '?':
+			case 'h':
+				usage();
+		}
+	}
+
+	if (fn != 0) {
+		process_ibfile(fn);
+		close(fn);
+	} else usage();
 	
-	fn = open_ibfile(argv[1]);
 	process_ibfile(fn);
 	close(fn);
 	
