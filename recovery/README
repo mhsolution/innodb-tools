@@ -14,7 +14,7 @@ Then you'll need to choose what table to parse and run records_parser with a tab
 
 
 Another option is to use heuristics_parser tool to get all records matching specified list of tables' records 
-according to table_def.h file.
+according to table_def.h file which could be generated with create_defs.pl script.
 
 How to build it
 ~~~~~~~~~~~~~~~
