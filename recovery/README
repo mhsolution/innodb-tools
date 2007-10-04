@@ -21,3 +21,5 @@ How to build it
 
 Compile mysql 4.1.X on your server. Then take libut.a file from innobase/ut/ and place it to current directory.
 Then run make command and you'll get two binaries.
+
+If you'd like to build static versions of binaries, uncomment CFLAGS line in the Makefile.
