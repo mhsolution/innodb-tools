@@ -103,7 +103,7 @@ void process_pages_dir(char *dir_name) {
 		ext = strstr(entry->d_name, ".page");
 		
 		// Skip all files excape a files with .page extension
-		if (entry->d_type != DT_REG || est == NULL) {
+		if (entry->d_type != DT_REG || ext == NULL) {
 			printf("Skipping dir entry: %s\n", entry->d_name);
 			continue;
 		}
