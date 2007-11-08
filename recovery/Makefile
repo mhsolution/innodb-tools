@@ -12,6 +12,9 @@ records_parser: records_parser.c error.h common.h common.c
 heuristic_parser: heuristic_parser.c error.h common.h table_defs.h common.c
 	gcc $(CFLAGS) -g -I innodb_includes -I mysql_includes -o heuristic_parser heuristic_parser.c common.c libut.a
 
+constraints_parser: constraints_parser.c error.h common.h table_defs.h common.c
+	gcc $(CFLAGS) -g -I innodb_includes -I mysql_includes -o constraints_parser constraints_parser.c common.c libut.a
+
 
 dist:
 	mkdir -p innodb_recovery

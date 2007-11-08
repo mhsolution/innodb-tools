@@ -3,11 +3,12 @@
 use strict;
 use DBI;
 use Data::Dumper;
+use POSIX;
 
-my $db_name = "scm_prod";
+my $db_name = "test";
 my $db_host = "127.0.0.1";
-my $db_port = 3333;
-my $db_user = "root";
+my $db_port = 3306;
+my $db_user = "scoundrel";
 my $db_pass = "";
 
 my $dsn = "DBI:mysql:database=$db_name;host=$db_host;port=$db_port";
@@ -66,7 +67,7 @@ sub DumpTableDef($$$) {
 	my $fields = shift;
 	my $pk_fields = shift;
 
-	print("\t{\n\t\t\"$table\",\n\t\t{\n");
+	print("\t{\n\t\tname: \"$table\",\n\t\t{\n");
 	
 	# Dump all PK fields
 	foreach my $pk_field (@$pk_fields) {
@@ -75,19 +76,19 @@ sub DumpTableDef($$$) {
 	
 	# Dump system PK if no PK fields found
 	if (scalar(@$pk_fields) == 0) {
-		DumpFieldLow(Name => 'DB_ROW_ID', Type => 'FT_INTERNAL', Len => 6, Null => 0);
+		DumpFieldLow(Name => 'DB_ROW_ID', ParsedType => 'FT_INTERNAL', FixedLen => 6, Null => 0);
 	}
 	
 	# Dump 2 more sys fields
-	DumpFieldLow(Name => 'DB_TRX_ID', Type => 'FT_INTERNAL', Len => 6, Null => 0);
-	DumpFieldLow(Name => 'DB_ROLL_PTR', Type => 'FT_INTERNAL', Len => 7, Null => 0);
+	DumpFieldLow(Name => 'DB_TRX_ID', ParsedType => 'FT_INTERNAL', FixedLen => 6, Null => 0);
+	DumpFieldLow(Name => 'DB_ROLL_PTR', ParsedType => 'FT_INTERNAL', FixedLen => 7, Null => 0);
 	
 	# Dump the rest of the fields
 	foreach my $field (@$fields) {
 		DumpField($table, $field) unless $field->{Key} eq 'PRI';
 	}
 
-	print("\t\t\t{ \"\", 0 }\n");
+	print("\t\t\t{ type: FT_NONE }\n");
 	print("\t\t}\n\t},\n");
 }
 
@@ -106,10 +107,20 @@ sub FindFieldByName($$) {
 #------------------------------------------------------------------
 sub DumpFieldLow {
 	my %info = @_;
-	unless(defined($info{LenMin})) {
-		$info{LenMin} = $info{LenMax} = $info{Len};
+	
+	printf("\t\t\t{ /* %s */\n", $info{Type});
+	printf("\t\t\t\tname: \"%s\",\n", $info{Name});
+	printf("\t\t\t\ttype: %s,\n", $info{ParsedType});
+
+	if ($info{FixedLen}) {
+		printf("\t\t\t\tfixed_length: %d,\n", $info{FixedLen});
+	} else {
+		printf("\t\t\t\tmin_length: %d,\n", $info{MinLen});
+		printf("\t\t\t\tmax_length: %d,\n", $info{MaxLen});
 	}
-	printf("\t\t\t{ \"%s\", %s, %d, %d },\n", $info{Name}, $info{Type}, (!$info{Null})*$info{LenMin}, $info{LenMax});
+
+	printf("\t\t\t\tcan_be_null: %s\n", $info{Null} ? 'TRUE' : 'FALSE');
+	printf("\t\t\t},\n");
 }
 
 #------------------------------------------------------------------
@@ -126,9 +137,11 @@ sub DumpField($$) {
 		$type_info->{type} = 'FT_UINT';
 	}
 	
-	$info{Type} = $type_info->{type};
-	$info{LenMin} = $type_info->{len_min};
-	$info{LenMax} = $type_info->{len_max};
+	$info{Type} = $field->{Type};
+	$info{ParsedType} = $type_info->{type};
+	$info{MinLen} = $type_info->{min_len};
+	$info{MaxLen} = $type_info->{max_len};
+	$info{FixedLen} = $type_info->{fixed_len};
 
 	DumpFieldLow(%info);
 }
@@ -147,51 +160,56 @@ sub ParseFieldType($) {
 	my $type = shift;
 	
 	if ($type =~ /DATETIME/i) {
-		return { type => 'FT_DATETIME', len_min => 8, len_max => 8 };
+		return { type => 'FT_DATETIME', fixed_len => 8 };
 	}
 
 	if ($type =~ /TIMESTAMP/i) {
-		return { type => 'FT_UINT', len_min => 4, len_max => 4 };
+		return { type => 'FT_UINT', fixed_len => 4 };
 	}
 
 	if ($type =~ /DATE/i) {
-		return { type => 'FT_DATE', len_min => 8, len_max => 8 };
+		return { type => 'FT_DATE', fixed_len => 8 };
 	}
 
 	if ($type =~ /^BIGINT/i) {
-		return { type => 'FT_INT', len_min => 8, len_max => 8 };
+		return { type => 'FT_INT', fixed_len => 8 };
 	}
 
 	if ($type =~ /^INT/i) {
-		return { type => 'FT_INT', len_min => 4, len_max => 4 };
+		return { type => 'FT_INT', fixed_len => 4 };
 	}
 
 	if ($type =~ /^SMALLINT/i) {
-		return { type => 'FT_INT', len_min => 2, len_max => 2 };
+		return { type => 'FT_INT', fixed_len => 2 };
 	}
 
 	if ($type =~ /^TINYINT/i) {
-		return { type => 'FT_INT', len_min => 1, len_max => 1 };
+		return { type => 'FT_INT', fixed_len => 1 };
 	}
 
 	if ($type =~ /(.*)CHAR\((\d+)\)/i) {
-		return { type => 'FT_CHAR', len_min => ($1 ne '' ? 0 : $2), len_max => $2 };
+		return { type => 'FT_CHAR', min_len => ($1 ne '' ? 0 : $2), max_len => $2 };
 	}
 
-	if ($type =~ /^TEXT/i) {
-		return { type => 'FT_CHAR', len_min => 0, len_max => 65535 };
+	if ($type =~ /^TEXT/i || $type =~ /MEDIUMTEXT/i) {
+		return { type => 'FT_CHAR', min_len => 0, max_len => 65535 };
 	}
 
 	if ($type =~ /^FLOAT/i) {
-		return { type => 'FT_FLOAT', len_min => 4, len_max => 4 };
+		return { type => 'FT_FLOAT', min_len => 4, max_len => 4 };
 	}
 
 	if ($type =~ /^DOUBLE/i) {
-		return { type => 'FT_DOUBLE', len_min => 8, len_max => 8 };
+		return { type => 'FT_DOUBLE', fixed_len => 8 };
 	}
 
 	if ($type =~ /^ENUM/i) {
-		return { type => 'FT_UINT', len_min => 1, len_max => 1 };
+		return { type => 'FT_UINT', fixed_len => 1 };
+	}
+
+	if ($type =~ /^DECIMAL\((\d+),\s*(\d+)\)/i) {
+		my $len_bytes = ceil(($1-$2) * 4 / 9) + ceil($2*4/9);
+		return { type => 'FT_CHAR', fixed_len => $len_bytes };
 	}
 
 	die "Unsupported type: $type!\n";
