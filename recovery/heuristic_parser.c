@@ -150,15 +150,15 @@ ulint process_ibrec(rec_t *rec, page_t *page, table_def_t *table) {
 	// Print table name
 	printf("%s\t", table->name);
 	
-//	printf("Processing record %p\n", rec);
+	printf("Processing record %p\n", rec);
 	
 	fields_number = rec_get_n_fields(rec);
-//	printf("Fields number: %lu\n", fields_number);
+	printf("Fields number: %lu\n", fields_number);
 	
 	data_size = rec_get_data_size(rec);
 
-//	printf("Data size: %lu\n", data_size);
-//	printf("Deleted flag: %d\n", rec_get_deleted_flag(rec));
+	printf("Data size: %lu\n", data_size);
+	printf("Deleted flag: %d\n", rec_get_deleted_flag(rec));
 
 	info_bits = rec_get_info_bits(rec);
 	for(i = 0; i < fields_number; i++) {
@@ -168,6 +168,7 @@ ulint process_ibrec(rec_t *rec, page_t *page, table_def_t *table) {
 		if (table->fields[i].type == FT_INTERNAL) continue;
 		
 		field = rec_get_nth_field(rec, i, &len);
+		printf("Field #%i: length %lu\n", i, len);
 		if (len == UNIV_SQL_NULL) {
 			printf("NULL");
 		} else {
@@ -253,7 +254,7 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table) {
 		byte *field;
 		
 		field = rec_get_nth_field(rec, i, &len);
-//		printf("Checking field #%d/%d, %s[%lu, %lu] vs %lu...", i, table->fields_count, table->fields[i].name, table->fields[i].min_length, table->fields[i].max_length, len);
+		printf("Checking field #%d/%d, %s[%lu, %lu] vs %lu...\n", i, table->fields_count, table->fields[i].name, table->fields[i].min_length, table->fields[i].max_length, len);
 		if (len == UNIV_SQL_NULL && table->fields[i].min_length == 0) continue;
 		if (len < table->fields[i].min_length || len > table->fields[i].max_length) return FALSE;
 
@@ -263,7 +264,7 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table) {
 		}
 	}
 	
-//	printf("\n");
+	printf("\n");
 	return TRUE;
 }
 
@@ -274,35 +275,42 @@ rec_t* check_for_a_record(page_t *page, rec_t *rec_start, ulint offsets_size, ta
 
 	// Get a possible record origin
 	rec = rec_start + offsets_size * table->fields_count + REC_N_EXTRA_BYTES;
+	if (rec-page == 138 && offsets_size == 2) return rec;
 
 	// Check record bounds
 	if (rec - page >= UNIV_PAGE_SIZE - table->data_min_size - 1) return FALSE;
-//	printf("0 ");
+	printf("0 ");
 
 	// Skip if bit count flag is incorrect
 	if (rec_get_1byte_offs_flag(rec) != (offsets_size == 1)) return FALSE;
-//	printf("1 ");
+	printf("1 ");
 
 	// Check fields count
 	if (rec_get_n_fields(rec) != table->fields_count) return FALSE;
-//	printf("2 ");
+	printf("2 ");
 	
 	// Skip non-deleted records
 	if (deleted_records_only && !rec_get_deleted_flag(rec)) return FALSE;
-//	printf("3 ");
+	printf("3 ");
 
 	// Check the record's data size
 	data_size = rec_get_data_size(rec);
-	if (data_size > table->data_max_size || data_size < table->data_min_size) return FALSE;
+//	if (data_size > table->data_max_size || data_size < table->data_min_size) {
+//		printf("Table '%s' record: size %lu is out of bounds [%lu, %lu]\n", table->name, data_size, table->data_min_size, table->data_max_size);
+//		return FALSE;
+//	}
 //	printf("4 ");
 
 	// Check the record for validity by innodb's function
-	if (!ibrec_validate(page, rec)) return FALSE;
+//	if (!ibrec_validate(page, rec)) return FALSE;
 //	printf("5 ");
 	
 	// Check fields sizes and (later) field values
-	if (!check_fields_sizes(rec, table)) return FALSE;
-//	printf("6 ");
+	if (!check_fields_sizes(rec, table)) {
+		printf("Table '%s' record: fields sizes check failed\n", table->name);
+		return FALSE;
+	}
+	printf("6 ");
 	
 	// This record could be valid and useful
 	return rec;
@@ -315,11 +323,19 @@ void process_ibpage(page_t *page) {
 	ulint offset, rec_size, i;
 	
 	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
-//	printf("Page id: %lu\n", page_id);
+//	if (page_id != 514) return;
+	printf("Page id: %lu\n", page_id);
+
+	if (page_is_comp(page)) {
+		printf("Page is compact!\n");
+	} else {
+		printf("Page is in old format\n");
+	}
+	return;
 
 	// Find possible data area start point (end of supremum + 6 bytes of extra + at least 3 offsets)
 	offset = 0; 
-//	printf("Starting offset: %lu\n", offset);
+	printf("Starting offset: %lu\n", offset);
 	
 	// Walk through all possible positions to the end of page 
 	// (start of directory - extra bytes of the last rec)
@@ -333,25 +349,25 @@ void process_ibpage(page_t *page) {
 			table_def_t table = table_definitions[i];
 
 			// check for a record with 1 byte offsets
-//			printf("%s@%lu[1]: ", table.name, offset);
+			printf("%s@%lu[1]: ", table.name, offset);
 			rec = check_for_a_record(page, rec_start, 1, &table);
-//			printf("\n");
+			printf("\n");
 			
 			if (rec) {
-//				printf("---------------------------------------------------\n"
-//				       "PAGE%lu: Found a table %s record with 1-byte offsets: %p (offset = %lu)\n", page_id, table.name, rec, rec-page);
+				printf("---------------------------------------------------\n"
+				       "PAGE%lu: Found a table %s record with 1-byte offsets: %p (offset = %lu)\n", page_id, table.name, rec, rec-page);
 				offset += process_ibrec(rec, page, &table);
 				break;
 			}
 
 			// check for a record with 2 byte offsets
-//			printf("%s@%lu[2]: ", table.name, offset);
+			printf("%s@%lu[2]: ", table.name, offset);
 			rec = check_for_a_record(page, rec_start, 2, &table);
-//			printf("\n");
+			printf("\n");
 
 			if (rec) {
-//				printf("---------------------------------------------------\n"
-//				       "PAGE%lu: Found a table %s record with 2-byte offsets: %p (offset = %lu)\n", page_id, table.name, rec, rec-page);
+				printf("---------------------------------------------------\n"
+				       "PAGE%lu: Found a table %s record with 2-byte offsets: %p (offset = %lu)\n", page_id, table.name, rec, rec-page);
 				offset += process_ibrec(rec, page, &table);
 				break;
 			}

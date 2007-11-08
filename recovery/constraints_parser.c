@@ -19,6 +19,7 @@
 // Global flags from getopt
 bool deleted_pages_only = 0;
 bool deleted_records_only = 0;
+bool debug = 0;
 
 /*******************************************************************/
 inline ulonglong make_ulonglong(dulint x) {
@@ -68,44 +69,65 @@ void print_date(ulonglong ldate) {
 	printf("\"%04u-%02u-%02u\"", year, month, day);
 }
 
+/*******************************************************************/
+unsigned long long int get_uint_value(field_def_t *field, byte *value) {
+	switch (field->fixed_length) {
+		case 1: return mach_read_from_1(value);
+		case 2: return mach_read_from_2(value);
+		case 4: return mach_read_from_4(value);
+		case 8: return make_ulonglong(mach_read_from_8(value));
+	}
+	return 0;
+}
+
+/*******************************************************************/
+unsigned long long int get_int_value(field_def_t *field, byte *value) {
+	switch (field->fixed_length) {
+		case 1: return mach_read_from_1(value) ^ 1<<7;
+		case 2: return mach_read_from_2(value) ^ 1<<15;
+		case 4: return mach_read_from_4(value) ^ 1L<<31;
+		case 8: return make_longlong(mach_read_from_8(value)) ^ 1LL << 63;
+	}
+	return 0;
+}
 
 /*******************************************************************/
 void print_field_value(byte *value, ulint len, field_def_t *field) {
 	int i;
-	
-//	printf("%s=", field->name);
 	
 	switch (field->type) {
 		case FT_INTERNAL:
     		break;
 
 		case FT_CHAR:
+		case FT_TEXT:
     		printf("\"");
 		    for(i = 0; i < len; i++) {
 				if (value[i] == '"') printf("\\\"");
 				else if (value[i] == '\n') printf("\\n");
+				else if (value[i] == '\r') printf("\\r");
 				else printf("%c", value[i]);
     		}
     		printf("\"");
 			break;
 
 		case FT_UINT:
-			switch (field->max_length) {
+			switch (field->fixed_length) {
 				case 1: printf("%u", mach_read_from_1(value)); break;
 				case 2: printf("%u", mach_read_from_2(value)); break;
 				case 4: printf("%lu", mach_read_from_4(value)); break;
 				case 8: printf("%llu", make_ulonglong(mach_read_from_8(value))); break;
-				default: printf("uint_undef(%d)", field->max_length);
+				default: printf("uint_undef(%d)", field->fixed_length);
 			}
 			break;
 
 		case FT_INT:
-			switch (field->max_length) {
+			switch (field->fixed_length) {
 				case 1: printf("%d", mach_read_from_1(value) ^ 1<<7); break;
 				case 2: printf("%i", mach_read_from_2(value) ^ 1<<15); break;
 				case 4: printf("%li", mach_read_from_4(value) ^ 1L<<31); break;
 				case 8: printf("%lli", make_longlong(mach_read_from_8(value)) ^ 1LL << 63); break;
-				default: printf("int_undef(%d)", field->max_length);
+				default: printf("int_undef(%d)", field->fixed_length);
 			}
 			break;
 
@@ -128,48 +150,96 @@ void print_field_value(byte *value, ulint len, field_def_t *field) {
 		default:
     		printf("undef(%d)", field->type);
 	}
-
-//	printf(" ("); ut_print_buf(stdout, value, len); printf(" )");
 }
+
+
+
+/*******************************************************************/
+void
+rec_print_new(
+/*==========*/
+	FILE*		file,	/* in: file where to print */
+	rec_t*		rec,	/* in: physical record */
+	const ulint*	offsets)/* in: array returned by rec_get_offsets() */
+{
+	const byte*	data;
+	ulint		len;
+	ulint		i;
+
+	ut_ad(rec_offs_validate(rec, NULL, offsets));
+
+	ut_ad(rec);
+
+	fprintf(file, "PHYSICAL RECORD: n_fields %lu;"
+		" compact format; info bits %lu\n",
+		(ulong) rec_offs_n_fields(offsets),
+		(ulong) rec_get_info_bits(rec, TRUE));
+	
+	for (i = 0; i < rec_offs_n_fields(offsets); i++) {
+
+		data = rec_get_nth_field(rec, offsets, i, &len);
+
+		fprintf(file, " %lu:", (ulong) i);
+	
+		if (len != UNIV_SQL_NULL) {
+			if (len <= 30) {
+
+				ut_print_buf(file, data, len);
+			} else {
+				ut_print_buf(file, data, 30);
+
+				fputs("...(truncated)", file);
+			}
+		} else {
+			fputs(" SQL NULL", file);
+		}
+		putc(';', file);
+	}
+
+	putc('\n', file);
+}
+
 
 /*******************************************************************/
 ulint process_ibrec(page_t *page, rec_t *rec, table_def_t *table, ulint *offsets) {
 	ulint info_bits, data_size;
-	int fields_number, i;
+	int i;
 
 	// Print table name
-//	printf("%s\t", table->name);
-	printf("Processing record %p from table '%s'\n", rec, table->name);
+	if (debug) {
+		printf("Processing record %p from table '%s'\n", rec, table->name);
+		printf("Field offsets: ");
+		for(i = 0; i < rec_offs_n_fields(offsets); i++) {
+			printf("%lu ", rec_offs_base(offsets)[i]);
+		}
+		printf("\n");
+
+		rec_print_new(stdout, rec, offsets);
+	} else {
+		printf("%s\t", table->name);
+	}
 
 	data_size = rec_offs_data_size(offsets);
 
-/*	
-	fields_number = rec_get_n_fields(rec);
-	printf("Fields number: %lu\n", fields_number);
-	
-
-	printf("Data size: %lu\n", data_size);
-	printf("Deleted flag: %d\n", rec_get_deleted_flag(rec));
-
-	info_bits = rec_get_info_bits(rec);
-	for(i = 0; i < fields_number; i++) {
+	for(i = 0; i < table->fields_count; i++) {
 		ulint len;
-		byte *field;
+		byte *field = rec_get_nth_field(rec, offsets, i, &len);
 		
 		if (table->fields[i].type == FT_INTERNAL) continue;
 		
-		field = rec_get_nth_field(rec, i, &len);
-		printf("Field #%i: length %lu\n", i, len);
+		if (debug) printf("Field #%i: length %lu, value: ", i, len);
+
 		if (len == UNIV_SQL_NULL) {
 			printf("NULL");
 		} else {
 			print_field_value(field, len, &(table->fields[i]));
 		}
 		
-		if (i < fields_number - 1) printf("\t");
+		if (i < table->fields_count - 1) printf("\t");
+		if (debug) printf("\n");
 	}
+
 	printf("\n");
-*/
 	return data_size; // point to the next possible record's start
 }
 
@@ -200,7 +270,46 @@ ibool check_datetime(ulonglong ldate) {
 	return TRUE;
 }
 
-//FIXME: need to check more data ranges
+/*******************************************************************/
+static ibool check_char_ascii(char *value, ulint len) {
+	char *p = value;
+	do { 
+		if (!isprint(*p)) return FALSE;
+	} while (++p < value + len);
+	return TRUE;
+}
+
+
+/*******************************************************************/
+static ibool check_field_limits(field_def_t *field, byte *value, ulint len) {
+	long long int int_value;
+	unsigned long long int uint_value;
+	
+	if (len == UNIV_SQL_NULL) return TRUE;
+	
+	switch (field->type) {
+		case FT_INT:
+			int_value = get_int_value(field, value);
+			if (int_value < field->limits.int_min_val) return FALSE;
+			if (int_value > field->limits.int_max_val) return FALSE;
+			break;
+
+		case FT_UINT:
+			uint_value = get_uint_value(field, value);
+			if (uint_value < field->limits.uint_min_val) return FALSE;
+			if (uint_value > field->limits.uint_max_val) return FALSE;
+			break;
+
+		case FT_TEXT:
+		case FT_CHAR:
+			if (len < field->limits.char_min_len) return FALSE;
+			if (len > field->limits.char_max_len) return FALSE;
+			if (field->limits.char_ascii_only && !check_char_ascii((char*)value, len)) return FALSE;
+			break;
+	}
+
+	return TRUE;
+}
 
 /*******************************************************************/
 static ibool check_constraints(rec_t *rec, table_def_t* table, ulint* offsets) {
@@ -216,6 +325,9 @@ static ibool check_constraints(rec_t *rec, table_def_t* table, ulint* offsets) {
 		if (table->fields[i].type == FT_DATETIME || table->fields[i].type == FT_DATE) {
 			if (!check_datetime(make_longlong(mach_read_from_8(field)))) return FALSE;
 		}
+		
+		if (!table->fields[i].has_limits) continue;
+		if (!check_field_limits(&(table->fields[i]), field, len)) return FALSE;
 	}
 	
 	return TRUE;
@@ -246,6 +358,13 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 			return FALSE;
 		}
 		
+		// Check if has externally stored data 
+		if (rec_offs_nth_extern(offsets, i)) {
+			if (debug) printf("\nEXTERNALLY STORED VALUE FOUND!\n");
+			if (table->fields[i].type != FT_CHAR) return FALSE;
+			continue;
+		}
+		
 		// Check size limits for varlen fields
 		if (len < table->fields[i].min_length || len > table->fields[i].max_length) return FALSE;
 	}
@@ -264,6 +383,9 @@ static ibool ibrec_init_offsets(page_t *page, rec_t* rec, table_def_t* table, ul
 
 	// Skip non-ordinary records
 	if (status != REC_STATUS_ORDINARY) return FALSE;
+
+	// First field is 0 bytes from origin point
+	rec_offs_base(offsets)[0] = 0;
 	
 	// Init first bytes
 	rec_offs_set_n_fields(offsets, table->fields_count);
@@ -272,9 +394,6 @@ static ibool ibrec_init_offsets(page_t *page, rec_t* rec, table_def_t* table, ul
 	lens = nulls - (table->n_nullable + 7) / 8;
 	offs = 0;
 	null_mask = 1;
-	
-	// First field is 0 bytes from origin point
-	rec_offs_base(offsets)[0] = 0;
 	
 	/* read the lengths of fields 0..n */
 	do {
@@ -305,7 +424,7 @@ static ibool ibrec_init_offsets(page_t *page, rec_t* rec, table_def_t* table, ul
 			/* Variable-length field: read the length */
 			len = *lens--;
 
-			if (field->max_length > 255 || field->type == FT_BLOB) {
+			if (field->max_length > 255 || field->type == FT_BLOB || field->type == FT_TEXT) {
 				if (len & 0x80) {
 					/* 1exxxxxxx xxxxxxxx */
 					len <<= 8;
@@ -341,30 +460,31 @@ ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *of
 	// Check if given origin is valid
 	offset = rec - page;
 	if (offset < 5 + table->min_rec_header_len) return FALSE;
-	printf("ORIGIN=OK ");
+	if (debug) printf("ORIGIN=OK ");
 
 	// Skip if relative pointer to the next record is too large
 	if (mach_read_from_2(rec-2) > UNIV_PAGE_SIZE - offset) return FALSE;
-	printf("NEXT=OK ");
+	if (debug) printf("NEXT=OK ");
 
 	// Get field offsets for current table
 	if (!(ok = ibrec_init_offsets(page, rec, table, offsets))) return FALSE;
-	printf("OFFSETS=OK ");
+	if (debug) printf("OFFSETS=OK ");
 	
 	// Skip non-deleted records
 	if (deleted_records_only && !rec_get_deleted_flag(rec, page_is_comp(page))) return FALSE;
-	printf("DELETED=OK ");
+	if (debug) printf("DELETED=OK ");
 
 	// Check the record's data size
 	data_size = rec_offs_data_size(offsets);
 	if (data_size > table->data_max_size || data_size < table->data_min_size) return FALSE;
-	printf("DATA_SIZE=OK ");
+	if (debug) printf("DATA_SIZE=OK ");
 
 	// Check fields sizes
 	if (!check_fields_sizes(rec, table, offsets)) return FALSE;
-	printf("FIELD_SIZES=OK ");
+	if (debug) printf("FIELD_SIZES=OK ");
 	
 	// This record could be valid and useful for us
+	printf(""); // STRANGE ERROR if this is removed (function never returns true)
 	return TRUE;
 }
 
@@ -377,34 +497,35 @@ void process_ibpage(page_t *page) {
 	
 	// Read page id
 	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
-	printf("Page id: %lu\n", page_id);
+	if (debug) printf("Page id: %lu\n", page_id);
 
 	// At this moment we support COMPACT pages only
 	if (!page_is_comp(page)) {
-		printf("Page is in old format - skipping\n");
+		if (debug) printf("Page is in old format - skipping\n");
 		return;
 	}
 
 	// Find possible data area start point (at least 5 bytes of utility data)
 	offset = 5;
-	printf("Starting offset: %lu\n", offset);
+	if (debug) printf("Starting offset: %lu\n", offset);
 	
 	// Walk through all possible positions to the end of page 
 	// (start of directory - extra bytes of the last rec)
 	while (offset < UNIV_PAGE_SIZE - REC_N_NEW_EXTRA_BYTES - 1) {
 		// Get record pointer
 		origin = page + offset;
-		printf("\nChecking offset: %lu: ", offset);
+		if (debug) printf("\nChecking offset: %lu: ", offset);
 		
 		// Check all tables
 		for (i = 0; i < table_definitions_cnt; i++) {
 			// Get table info
 			table_def_t table = table_definitions[i];
+			if (debug) printf(" (%s) ", table.name);
 
 			// Check if origin points to a valid record
 			if (check_for_a_record(page, origin, &table, offsets) && check_constraints(origin, &table, offsets)) {
-				printf("\n---------------------------------------------------\n"
-				       "PAGE%lu: Found a table %s record: %p (offset = %lu)\n", page_id, table.name, origin, offset);
+				if (debug) printf("\n---------------------------------------------------\n"
+				       			  "PAGE%lu: Found a table %s record: %p (offset = %lu)\n", page_id, table.name, origin, offset);
 				offset += process_ibrec(page, origin, &table, offsets);
 				break;
 			}
@@ -419,11 +540,11 @@ void process_ibpage(page_t *page) {
 void init_table_defs() {
 	int i, j;
 
-	printf("Initializing table definitions...\n");
+	if (debug) printf("Initializing table definitions...\n");
 	
 	for (i = 0; i < table_definitions_cnt; i++) {
 		table_def_t *table = &(table_definitions[i]);
-		printf("Processing table: %s\n", table->name);
+		if (debug) printf("Processing table: %s\n", table->name);
 		
 		table->n_nullable = 0;
 		table->min_rec_header_len = 0;
@@ -446,9 +567,11 @@ void init_table_defs() {
 		
 		table->min_rec_header_len += (table->n_nullable + 7) / 8;
 		
-		printf(" - nullable fields: %i\n", table->n_nullable);
-		printf(" - minimum header size: %i\n", table->min_rec_header_len);
-		printf("\n");
+		if (debug) {
+			printf(" - nullable fields: %i\n", table->n_nullable);
+			printf(" - minimum header size: %i\n", table->min_rec_header_len);
+			printf("\n");
+		}
 	}
 }
 
@@ -460,9 +583,10 @@ void process_ibfile(int fn) {
 	
 	if (!page) error("Can't allocate page buffer!");
 
+	// Initialize table definitions (count nullable fields, data sizes, etc)
 	init_table_defs();
 
-	printf("Read data from fn=%d...\n", fn);
+	if (debug) printf("Read data from fn=%d...\n", fn);
 
 	// Read pages to the end of file
 	while ((read_bytes = read(fn, page, UNIV_PAGE_SIZE)) == UNIV_PAGE_SIZE) {
@@ -476,7 +600,7 @@ int open_ibfile(char *fname) {
 	int fn;
 
 	// Skip non-regular files
-	printf("Opening file: %s\n", fname);
+	if (debug) printf("Opening file: %s\n", fname);
 	if (stat(fname, &fstat) != 0 || (fstat.st_mode & S_IFREG) != S_IFREG) error("Invalid file specified!");
 	fn = open(fname, O_RDONLY, 0);
 	if (!fn) error("Can't open file!");
@@ -490,7 +614,9 @@ void usage() {
 	  "  Where\n"
 	  "    -h  -- Print this help\n"
 	  "    -d  -- Process only those pages which potentially could have deleted records (default = NO)\n"
-	  "    -D  -- Recover deleted rows only (default = NO)\n\n"
+	  "    -D  -- Recover deleted rows only (default = NO)\n"
+	  "    -V  -- Verbode mode (lots of debug information)\n"
+	  "\n"
 	);
 }
 
@@ -500,7 +626,7 @@ int main(int argc, char **argv) {
 
 	setbuf(stdout, NULL);
 
-	while ((ch = getopt(argc, argv, "hdDf:")) != -1) {
+	while ((ch = getopt(argc, argv, "hdDVf:")) != -1) {
 		switch (ch) {
 			case 'd':
 				deleted_pages_only = 1;
@@ -512,6 +638,10 @@ int main(int argc, char **argv) {
 
 			case 'f':
 				fn = open_ibfile(optarg);
+				break;
+
+			case 'V':
+				debug = 1;
 				break;
 
 			default:

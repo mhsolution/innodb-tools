@@ -1,8 +1,21 @@
 #ifndef common_h
 #define common_h
 
+// Field limits type
+typedef struct field_limits {
+	long long int int_min_val;
+	long long int int_max_val;
+
+	unsigned long long int uint_min_val;
+	unsigned long long int uint_max_val;
+
+	long long int char_min_len;
+	long long int char_max_len;
+	ibool char_ascii_only;
+} field_limits_t;
+
 // Table definition types
-enum field_type {
+typedef enum field_type {
 	FT_NONE,		// dummy type for stop records
 	FT_INTERNAL,	// supported
 	FT_CHAR,		// supported (w/o externals)
@@ -15,10 +28,10 @@ enum field_type {
 	FT_ENUM,
 	FT_SET,
 	FT_BLOB,
+	FT_TEXT,
 	FT_BIT,
 	FT_DECIMAL
-}; 
-typedef enum field_type field_type_t;
+} field_type_t;
 
 typedef struct field_def {
 	char *name;
@@ -28,6 +41,9 @@ typedef struct field_def {
 	
 	ibool can_be_null;
 	int fixed_length;
+	
+	ibool has_limits;
+	field_limits_t limits;
 } field_def_t;
 
 #define MAX_TABLE_FIELDS 50

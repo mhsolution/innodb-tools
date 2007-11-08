@@ -61,7 +61,7 @@ void process_ibpage(page_t *page) {
 	close(fn);
 	
 	// Create fields info file (if directory did not exist yet)
-	if (table_dir_res != EEXIST) {
+	if (table_dir_res != EEXIST && index_id.high == 0) {
     	sprintf(tmp, "pages-%u/%lu-%lu/fields.info", timestamp, index_id.high, index_id.low);
 	    save_fields_info(tmp, page);	
 	}

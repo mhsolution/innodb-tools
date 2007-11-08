@@ -1,7 +1,7 @@
 # Uncomment to build static binaries
 #CFLAGS=-static
 
-all: page_parser records_parser heuristic_parser
+all: constraints_parser #page_parser records_parser heuristic_parser
 
 page_parser: page_parser.c error.h common.h common.c
 	gcc $(CFLAGS) -g -I innodb_includes -I mysql_includes -o page_parser page_parser.c common.c libut.a
