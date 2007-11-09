@@ -249,31 +249,31 @@ ibool check_datetime(ulonglong ldate) {
 	if (debug) printf("DATETIME=%llu ", ldate);
 
 	if (ldate == 0) return TRUE;
-	printf("DATE=OK ");
+	if (debug) printf("DATE=OK ");
 
 	sec = ldate % 100; ldate /= 100;
 	if (sec < 0 || sec > 59) return FALSE;
-	printf("SEC=OK ");
+	if (debug) printf("SEC=OK ");
 	
 	min = ldate % 100; ldate /= 100;
 	if (min < 0 || min > 59) return FALSE;
-	printf("MIN=OK ");
+	if (debug) printf("MIN=OK ");
 	
 	hour = ldate % 100; ldate /= 100;
 	if (hour < 0 || hour > 23) return FALSE;
-	printf("HOUR=OK ");
+	if (debug) printf("HOUR=OK ");
 
 	day = ldate % 100; ldate /= 100;
 	if (day < 0 || day > 31) return FALSE;
-	printf("DAY=OK ");
+	if (debug) printf("DAY=OK ");
 
 	month = ldate % 100; ldate /= 100;
-	if (month < 1 || month > 12) return FALSE;
-	printf("MONTH=OK ");
+	if (month < 0 || month > 12) return FALSE;
+	if (debug) printf("MONTH=OK ");
 
 	year = ldate % 10000;
-	if (year < 1900 || year > 2099) return FALSE;
-	printf("YEAR=OK ");
+	if (year < 1950 || year > 2050) return FALSE;
+	if (debug) printf("YEAR=OK ");
 
 	return TRUE;
 }
@@ -287,11 +287,20 @@ static ibool check_char_ascii(char *value, ulint len) {
 	return TRUE;
 }
 
+/*******************************************************************/
+static ibool check_char_digits(char *value, ulint len) {
+	char *p = value;
+	do { 
+		if (!isnumber(*p)) return FALSE;
+	} while (++p < value + len);
+	return TRUE;
+}
 
 /*******************************************************************/
 static ibool check_field_limits(field_def_t *field, byte *value, ulint len) {
 	long long int int_value;
 	unsigned long long int uint_value;
+	ulonglong date_value;
 	
 	switch (field->type) {
 		case FT_INT:
@@ -325,6 +334,13 @@ static ibool check_field_limits(field_def_t *field, byte *value, ulint len) {
 			if (len < field->limits.char_min_len) return FALSE;
 			if (len > field->limits.char_max_len) return FALSE;
 			if (field->limits.char_ascii_only && !check_char_ascii((char*)value, len)) return FALSE;
+			if (field->limits.char_digits_only && !check_char_digits((char*)value, len)) return FALSE;
+			break;
+
+		case FT_DATE:
+		case FT_DATETIME:
+			date_value = make_longlong(mach_read_from_8(value));
+			if (!check_datetime(date_value)) return FALSE;
 			break;
 	}
 
@@ -356,15 +372,7 @@ static ibool check_constraints(rec_t *rec, table_def_t* table, ulint* offsets) {
 			continue;
 		}
 		
-		// Validate date fields
-/*		if (table->fields[i].type == FT_DATETIME || table->fields[i].type == FT_DATE) {
-			if (!check_datetime(make_longlong(mach_read_from_8(field)))) {
-				if (debug) printf("DATETIME check failed!\n");
-				return FALSE;
-			}
-		}
-*/
-		
+		// Check limits
 		if (!table->fields[i].has_limits) continue;
 		if (!check_field_limits(&(table->fields[i]), field, len)) {
 			if (debug) printf("LIMITS check failed!\n");

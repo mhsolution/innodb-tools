@@ -3,6 +3,145 @@
 
 // Table definitions
 table_def_t table_definitions[] = {
+
+
+	{
+		name: "myreports",
+		{
+			{ /*  */
+				name: "DB_ROW_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_TRX_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_ROLL_PTR",
+				type: FT_INTERNAL,
+				fixed_length: 7,
+
+				can_be_null: FALSE
+			},
+			{ /* mediumint(9) */
+				name: "User_Id",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 0,
+					int_max_val: 30000
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Company_No",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 1,
+					char_max_len: 50,
+					char_digits_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* text */
+				name: "Company",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 65535,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 65535,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Report_No",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 1,
+					char_max_len: 255,
+					char_digits_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* text */
+				name: "Report",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 65535,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 65535,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Country",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 100,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Sector",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 150,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ type: FT_NONE }
+		}
+	},
+
 	{
 		name: "company_track",
 		{
@@ -443,8 +582,8 @@ table_def_t table_definitions[] = {
 				has_limits: TRUE,
 				limits: {
 					char_min_len: 0,
-					char_max_len: 255,
-					char_ascii_only: TRUE,
+					char_max_len: 1,
+					char_digits_only: TRUE,
 					can_be_null: TRUE
 				},
 
@@ -459,7 +598,7 @@ table_def_t table_definitions[] = {
 				has_limits: TRUE,
 				limits: {
 					char_min_len: 0,
-					char_max_len: 255,
+					char_max_len: 15,
 					char_ascii_only: TRUE,
 					can_be_null: TRUE
 				},
@@ -490,6 +629,600 @@ table_def_t table_definitions[] = {
 			{ type: FT_NONE }
 		}
 	},
+	
+	{
+		name: "crra_comments",
+		{
+			{ /*  */
+				name: "DB_ROW_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_TRX_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_ROLL_PTR",
+				type: FT_INTERNAL,
+				fixed_length: 7,
+
+				can_be_null: FALSE
+			},
+			{ /* mediumint(9) */
+				name: "User_Id",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 0,
+					int_max_val: 30000,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* mediumint(9) */
+				name: "Cat_No",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 1,
+					int_max_val: 20,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* mediumint(9) */
+				name: "Report_No",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 1,
+					int_max_val: 30000,
+					can_be_null: FALSE
+				},
+				
+				can_be_null: TRUE
+			},
+			{ /* tinyint(4) */
+				name: "Choice",
+				type: FT_INT,
+				fixed_length: 1,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 1,
+					int_max_val: 10,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* mediumtext */
+				name: "Comments",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 16777215,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 16777215,
+					char_ascii_only: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* datetime */
+				name: "Timestamp",
+				type: FT_DATETIME,
+				fixed_length: 8,
+
+				can_be_null: TRUE
+			},
+			{ type: FT_NONE }
+		}
+	},
+
+
+	{
+		name: "partner_track",
+		{
+			{ /*  */
+				name: "DB_ROW_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_TRX_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_ROLL_PTR",
+				type: FT_INTERNAL,
+				fixed_length: 7,
+
+				can_be_null: FALSE
+			},
+			{ /* mediumint(9) */
+				name: "User_Id",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 0,
+					int_max_val: 30000
+				},
+
+				can_be_null: FALSE
+			},
+			{ /* mediumint(9) */
+				name: "Partner_No",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 1,
+					int_max_val: 30000,
+					can_be_null: FALSE
+				},
+				
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Partner_Type",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 1,
+					char_max_len: 1,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* datetime */
+				name: "Timestamp",
+				type: FT_DATETIME,
+				fixed_length: 8,
+
+				has_limits: TRUE,
+				limits: {
+					date_validation: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ type: FT_NONE }
+		}
+	},	
+
+
+	{
+		name: "favourites",
+		{
+			{ /*  */
+				name: "DB_ROW_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_TRX_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_ROLL_PTR",
+				type: FT_INTERNAL,
+				fixed_length: 7,
+
+				can_be_null: FALSE
+			},
+			{ /* mediumint(9) */
+				name: "User_Id",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 0,
+					int_max_val: 30000
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "RP_No",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 1,
+					char_max_len: 15,
+					char_digits_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "RP_Type",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 1,
+					char_max_len: 1,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ type: FT_NONE }
+		}
+	},
+
+
+
+
+
+	{
+		name: "eventalert",
+		{
+			{ /* int(11) */
+				name: "ID",
+				type: FT_INT,
+				fixed_length: 4,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 1,
+					int_max_val: 30000
+				},
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_TRX_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_ROLL_PTR",
+				type: FT_INTERNAL,
+				fixed_length: 7,
+
+				can_be_null: FALSE
+			},
+			{ /* text */
+				name: "Title",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 65535,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 1,
+					char_max_len: 100,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* date */
+				name: "Sortdate",
+				type: FT_DATE,
+				fixed_length: 8,
+
+				has_limits: TRUE,
+				limits: {
+					date_validation: TRUE,
+					can_be_null: TRUE
+				},
+				
+
+				can_be_null: TRUE
+			},
+			{ /* date */
+				name: "Expirydate",
+				type: FT_DATE,
+				fixed_length: 8,
+
+				has_limits: TRUE,
+				limits: {
+					date_validation: TRUE,
+					can_be_null: TRUE
+				},
+				
+				can_be_null: TRUE
+			},
+			{ /* text */
+				name: "Text",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 65535,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 10000,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Link",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 255,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "image_id",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 255,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ type: FT_NONE }
+		}
+	},
+	
+	
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	{
+		name: "crra_votes",
+		{
+			{ /*  */
+				name: "DB_ROW_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_TRX_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_ROLL_PTR",
+				type: FT_INTERNAL,
+				fixed_length: 7,
+
+				can_be_null: FALSE
+			},
+			{ /* mediumint(9) */
+				name: "User_Id",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 0,
+					int_max_val: 30000
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* mediumint(9) */
+				name: "Cat_No",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 1,
+					int_max_val: 2000,
+					can_be_null: TRUE
+				},
+				
+				can_be_null: TRUE
+			},
+			{ /* mediumint(9) */
+				name: "Report_No",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 1,
+					int_max_val: 20000,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* mediumtext */
+				name: "Company",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 16777215,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 1,
+					char_max_len: 10000,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* mediumtext */
+				name: "Report",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 16777215,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 10000,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinyint(4) */
+				name: "Choice",
+				type: FT_INT,
+				fixed_length: 1,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 1,
+					int_max_val: 10,
+					can_be_null: TRUE
+				},
+				
+				can_be_null: TRUE
+			},
+			{ /* datetime */
+				name: "Timestamp",
+				type: FT_DATETIME,
+				fixed_length: 8,
+
+				has_limits: TRUE,
+				limits: {
+					date_validation: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ type: FT_NONE }
+		}
+	},	
+	{
+		name: "report_track",
+		{
+			{ /*  */
+				name: "DB_ROW_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_TRX_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
+
+				can_be_null: FALSE
+			},
+			{ /*  */
+				name: "DB_ROLL_PTR",
+				type: FT_INTERNAL,
+				fixed_length: 7,
+
+				can_be_null: FALSE
+			},
+			{ /* mediumint(9) */
+				name: "User_Id",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 0,
+					int_max_val: 30000
+				},
+
+				can_be_null: FALSE
+			},
+			{ /* mediumint(9) */
+				name: "Report_No",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 1,
+					int_max_val: 30000,
+					can_be_null: FALSE
+				},
+				
+				can_be_null: TRUE
+			},
+			{ /* datetime */
+				name: "Timestamp",
+				type: FT_DATETIME,
+				fixed_length: 8,
+
+				can_be_null: TRUE
+			},
+			{ type: FT_NONE }
+		}
+	},	
 };
 
 int table_definitions_cnt = sizeof(table_definitions) / sizeof(table_def_t);

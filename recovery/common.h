@@ -19,8 +19,12 @@ typedef struct field_limits {
 	long long int char_min_len;
 	long long int char_max_len;
 	
-	// Should data be forced down to ascii charset or not
+	// Should data be forced down to some ASCII sub-set or not
 	ibool char_ascii_only;
+	ibool char_digits_only;
+	
+	// Dates validation
+	ibool date_validation;
 } field_limits_t;
 
 // Table definition types
