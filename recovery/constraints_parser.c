@@ -282,7 +282,7 @@ ibool check_datetime(ulonglong ldate) {
 static ibool check_char_ascii(char *value, ulint len) {
 	char *p = value;
 	do { 
-		if (!isprint(*p)) return FALSE;
+		if (!isprint(*p) && *p != '\n' && *p != '\t' && *p != '\r') return FALSE;
 	} while (++p < value + len);
 	return TRUE;
 }
@@ -582,7 +582,7 @@ void process_ibpage(page_t *page) {
 
 	// Find possible data area start point (at least 5 bytes of utility data)
 	offset = 5;
-	offset = 0x93;
+	offset = 0x416;
 	if (debug) printf("Starting offset: %lu\n", offset);
 	
 	// Walk through all possible positions to the end of page 
