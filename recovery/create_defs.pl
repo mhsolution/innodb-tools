@@ -5,7 +5,7 @@ use DBI;
 use Data::Dumper;
 use POSIX;
 
-my $db_name = "test";
+my $db_name = "corporateregister";
 my $db_host = "127.0.0.1";
 my $db_port = 3306;
 my $db_user = "scoundrel";
@@ -118,6 +118,33 @@ sub DumpFieldLow {
 		printf("\t\t\t\tmin_length: %d,\n", $info{MinLen});
 		printf("\t\t\t\tmax_length: %d,\n", $info{MaxLen});
 	}
+	
+	printf("\n");
+	
+	if ($info{ParsedType} eq 'FT_TEXT' || $info{ParsedType} eq 'FT_CHAR') {
+		printf("\t\t\t\thas_limits: TRUE,\n");
+		printf("\t\t\t\tlimits: {\n");
+		printf("\t\t\t\t\tchar_min_len: 0,\n");
+		printf("\t\t\t\t\tchar_max_len: %d,\n", $info{MaxLen});
+		printf("\t\t\t\t\tchar_ascii_only: TRUE\n");
+		printf("\t\t\t\t},\n\n");
+	}
+
+	if ($info{ParsedType} eq 'FT_INT' && $info{Name} =~ /id$/i) {
+		printf("\t\t\t\thas_limits: TRUE,\n");
+		printf("\t\t\t\tlimits: {\n");
+		printf("\t\t\t\t\tint_min_val: 0,\n");
+		printf("\t\t\t\t\tint_max_val: 30000\n");
+		printf("\t\t\t\t},\n\n");
+	} 
+
+	if ($info{ParsedType} eq 'FT_UINT' && $info{Name} =~ /id$/i) {
+		printf("\t\t\t\thas_limits: TRUE,\n");
+		printf("\t\t\t\tlimits: {\n");
+		printf("\t\t\t\t\tuint_min_val: 0,\n");
+		printf("\t\t\t\t\tuint_max_val: 30000\n");
+		printf("\t\t\t\t},\n\n");
+	} 
 
 	printf("\t\t\t\tcan_be_null: %s\n", $info{Null} ? 'TRUE' : 'FALSE');
 	printf("\t\t\t},\n");
@@ -171,28 +198,44 @@ sub ParseFieldType($) {
 		return { type => 'FT_DATE', fixed_len => 8 };
 	}
 
-	if ($type =~ /^BIGINT/i) {
-		return { type => 'FT_INT', fixed_len => 8 };
-	}
-
-	if ($type =~ /^INT/i) {
-		return { type => 'FT_INT', fixed_len => 4 };
+	if ($type =~ /^TINYINT/i) {
+		return { type => 'FT_INT', fixed_len => 1 };
 	}
 
 	if ($type =~ /^SMALLINT/i) {
 		return { type => 'FT_INT', fixed_len => 2 };
 	}
 
-	if ($type =~ /^TINYINT/i) {
-		return { type => 'FT_INT', fixed_len => 1 };
+	if ($type =~ /^MEDIUMINT/i) {
+		return { type => 'FT_INT', fixed_len => 3 };
+	}
+
+	if ($type =~ /^INT/i) {
+		return { type => 'FT_INT', fixed_len => 4 };
+	}
+
+	if ($type =~ /^BIGINT/i) {
+		return { type => 'FT_INT', fixed_len => 8 };
 	}
 
 	if ($type =~ /(.*)CHAR\((\d+)\)/i) {
 		return { type => 'FT_CHAR', min_len => ($1 ne '' ? 0 : $2), max_len => $2 };
 	}
 
-	if ($type =~ /^TEXT/i || $type =~ /MEDIUMTEXT/i) {
+	if ($type =~ /^TINYTEXT$/i) {
+		return { type => 'FT_TEXT', min_len => 0, max_len => 255 };
+	}
+
+	if ($type =~ /^TEXT$/i) {
 		return { type => 'FT_TEXT', min_len => 0, max_len => 65535 };
+	}
+
+	if ($type =~ /^MEDIUMTEXT$/i) {
+		return { type => 'FT_TEXT', min_len => 0, max_len => 16777215 };
+	}
+
+	if ($type =~ /^LONGTEXT$/i) {
+		return { type => 'FT_TEXT', min_len => 0, max_len => 4294967295 };
 	}
 
 	if ($type =~ /^FLOAT/i) {

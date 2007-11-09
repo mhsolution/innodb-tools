@@ -4,438 +4,488 @@
 // Table definitions
 table_def_t table_definitions[] = {
 	{
-		name: "account_details",
+		name: "company_track",
 		{
-			{ /* int(11) */
-				name: "details_id",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
+			{ /*  */
+				name: "DB_ROW_ID",
+				type: FT_INTERNAL,
+				fixed_length: 6,
 
-				has_limits: TRUE,
-				limits: {
-					int_min_val: 1,
-					int_max_val: 10000
-				}
+				can_be_null: FALSE
 			},
 			{ /*  */
 				name: "DB_TRX_ID",
 				type: FT_INTERNAL,
 				fixed_length: 6,
+
 				can_be_null: FALSE
 			},
 			{ /*  */
 				name: "DB_ROLL_PTR",
 				type: FT_INTERNAL,
 				fixed_length: 7,
+
 				can_be_null: FALSE
 			},
-			{ /* int(11) */
-				name: "client_id",
+			{ /* mediumint(9) */
+				name: "User_Id",
 				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
-
-				has_limits: TRUE,
-				limits: {
-					int_min_val: 1,
-					int_max_val: 10000
-				}
-			},
-			{ /* int(11) */
-				name: "cp_id",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
-
-				has_limits: TRUE,
-				limits: {
-					int_min_val: 1,
-					int_max_val: 10000
-				}
-			},
-			{ /* int(11) */
-				name: "domain_id",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: TRUE,
-
-				has_limits: TRUE,
-				limits: {
-					int_min_val: 1,
-					int_max_val: 10000
-				}
-			},
-			{ /* varchar(255) */
-				name: "ip",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 255,
-				can_be_null: TRUE
-			},
-			{ /* varchar(255) */
-				name: "server",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 255,
-				can_be_null: FALSE
-			},
-			{ /* int(11) */
-				name: "server_type",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
+				fixed_length: 3,
 
 				has_limits: TRUE,
 				limits: {
 					int_min_val: 0,
-					int_max_val: 100
-				}
-			},
-			{ /* varchar(255) */
-				name: "username",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 255,
-				can_be_null: FALSE
-			},
-			{ /* varchar(255) */
-				name: "password",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 255,
-				can_be_null: TRUE
-			},
-			{ type: FT_NONE }
-		}
-	},
-	{
-		name: "client_package",
-		{
-			{ /* 0 - int(11) */
-				name: "cp_id",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
+					int_max_val: 32000
+				},
 
-				has_limits: TRUE,
-				limits: {
-					int_min_val: 1,
-					int_max_val: 2500
-				}
-			},
-			{ /* 1 */
-				name: "DB_TRX_ID",
-				type: FT_INTERNAL,
-				fixed_length: 6,
 				can_be_null: FALSE
 			},
-			{ /* 2 */
-				name: "DB_ROLL_PTR",
-				type: FT_INTERNAL,
-				fixed_length: 7,
-				can_be_null: FALSE
-			},
-			{ /* 3 - int(11) */
-				name: "client_id",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
-
-				has_limits: TRUE,
-				limits: {
-					int_min_val: 1,
-					int_max_val: 500
-				}
-			},
-			{ /* 4 - int(11) */
-				name: "pack_id",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
-
-				has_limits: TRUE,
-				limits: {
-					int_min_val: 1,
-					int_max_val: 2500
-				}
-			},
-			{ /* 5 - varchar(11) */
-				name: "pack_price",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 11,
-				can_be_null: FALSE,
-				
-				has_limits: TRUE,
-				limits: {
-					char_min_len: 0,
-					char_max_len: 10,
-					char_ascii_only: TRUE
-				}
-			},
-			{ /* 6 - int(11) */
-				name: "parent_cp_id",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: TRUE,
-
-				has_limits: TRUE,
-				limits: {
-					int_min_val: 0,
-					int_max_val: 2500
-				}
-			},
-			{ /* 7 - int(11) */
-				name: "cp_qty",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
-
-				has_limits: TRUE,
-				limits: {
-					int_min_val: 1,
-					int_max_val: 200
-				}
-			},
-			{ /* 8 - decimal(5,2) */
-				name: "cp_discount",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 25,
-				can_be_null: FALSE
-			},
-			{ /* 9 - int(11) */
-				name: "cp_start_stamp",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE
-			},
-			{ /* 10 - int(11) */
-				name: "cp_renew_stamp",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE
-			},
-			{ /* 11 - varchar(25) */
-				name: "cp_billing_cycle",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 25,
-				can_be_null: FALSE
-			},
-			{ /* 12 - varchar(25) */
-				name: "cp_status",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 25,
-				can_be_null: FALSE
-			},
-			{ /* 13 - mediumtext */
-				name: "cp_comments",
+			{ /* text */
+				name: "Company",
 				type: FT_TEXT,
 				min_length: 0,
-				max_length: 65000,
-				can_be_null: TRUE
-			},
-			{ /* 14 - int(11) */
-				name: "cp_renewed_on",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE
-			},
-			{ /* 15 - int(11) */
-				name: "cp_stamp",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE
-			},
-			{ /* 16 - varchar(255) */
-				name: "aff_code",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 255,
-				can_be_null: TRUE
-			},
-			{ /* 17 - int(11) */
-				name: "aff_last_paid",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: TRUE
-			},
-			{ /* 18 - varchar(255) */
-				name: "domain",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 255,
-				can_be_null: TRUE,
-				
-				has_limits: FALSE,
-				limits: {
-					char_min_len: 0,
-					char_max_len: 100,
-					char_ascii_only: TRUE
-				}
-			},
-			{ /* 19 - varchar(255) */
-				name: "ip",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 255,
-				can_be_null: TRUE,
-				
-				has_limits: FALSE,
-				limits: {
-					char_min_len: 0,
-					char_max_len: 100,
-					char_ascii_only: TRUE
-				}
-			},
-			{ /* 20 - varchar(255) */
-				name: "server",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 255,
-				can_be_null: TRUE
-			},
-			{ /* 21 - varchar(255) */
-				name: "username",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 255,
-				can_be_null: TRUE,
-				
+				max_length: 65535,
+
 				has_limits: TRUE,
 				limits: {
 					char_min_len: 0,
-					char_max_len: 100,
-					char_ascii_only: TRUE
-				}
+					char_max_len: 65535,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
 			},
-			{ /* 22 - varchar(255) */
-				name: "password",
-				type: FT_CHAR,
+			{ /* mediumint(9) */
+				name: "Company_No",
+				type: FT_INT,
+				fixed_length: 3,
+
+				has_limits: TRUE,
+				limits: {
+					int_min_val: 0,
+					int_max_val: 30000,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* text */
+				name: "Sector",
+				type: FT_TEXT,
 				min_length: 0,
-				max_length: 255,
-				can_be_null: TRUE,
-				
-				has_limits: FALSE,
+				max_length: 65535,
+
+				has_limits: TRUE,
 				limits: {
 					char_min_len: 0,
-					char_max_len: 100,
+					char_max_len: 65535,
 					char_ascii_only: TRUE
-				}
+				},
+
+				can_be_null: TRUE
 			},
-			{ /* 23 - varchar(255) */
-				name: "external_id",
-				type: FT_CHAR,
-				min_length: 0,
-				max_length: 255,
+			{ /* datetime */
+				name: "Timestamp",
+				type: FT_DATETIME,
+				fixed_length: 8,
+
 				can_be_null: TRUE
 			},
 			{ type: FT_NONE }
 		}
 	},
 	{
-		name: "domain_names",
+		name: "users",
 		{
-			{ /* int(11) */
-				name: "domain_id",
+			{ /* mediumint(9) */
+				name: "User_Id",
 				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
+				fixed_length: 3,
 
 				has_limits: TRUE,
 				limits: {
 					int_min_val: 1,
-					int_max_val: 2500
-				}
+					int_max_val: 30000
+				},
+
+				can_be_null: FALSE
 			},
 			{ /*  */
 				name: "DB_TRX_ID",
 				type: FT_INTERNAL,
 				fixed_length: 6,
+
 				can_be_null: FALSE
 			},
 			{ /*  */
 				name: "DB_ROLL_PTR",
 				type: FT_INTERNAL,
 				fixed_length: 7,
+
 				can_be_null: FALSE
 			},
-			{ /* varchar(255) */
-				name: "domain_name",
-				type: FT_CHAR,
+			{ /* tinytext */
+				name: "Username",
+				type: FT_TEXT,
 				min_length: 0,
 				max_length: 255,
-				can_be_null: FALSE,
-				
-				has_limits: TRUE,
-				limits: {
-					char_min_len: 4,
-					char_max_len: 100,
-					char_ascii_only: TRUE
-				}
-			},
-			{ /* int(11) */
-				name: "client_id",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
-				
-				has_limits: TRUE,
-				limits: {
-					int_min_val: 1,
-					int_max_val: 500
-				}
-			},
-			{ /* int(11) */
-				name: "domain_created",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
 
 				has_limits: TRUE,
 				limits: {
-					int_min_val: 0, // Jan, 1, 1970
-					int_max_val: 1577854800 // Jan, 1, 2020
-				}
+					char_min_len: 2,
+					char_max_len: 30,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
 			},
-			{ /* int(11) */
-				name: "domain_expires",
-				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
+			{ /* tinytext */
+				name: "Password",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
 
 				has_limits: TRUE,
 				limits: {
-					int_min_val: 0, // Jan, 1, 1970
-					int_max_val: 1577854800 // Jan, 1, 2020
-				}
+					char_min_len: 2,
+					char_max_len: 50,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
 			},
-			{ /* int(11) */
-				name: "registrar_id",
+			{ /* date */
+				name: "Last_Login",
+				type: FT_DATE,
+				fixed_length: 8,
+
+				can_be_null: TRUE
+			},
+			{ /* mediumint(9) */
+				name: "Num_Logins",
 				type: FT_INT,
-				fixed_length: 4,
-				can_be_null: FALSE,
+				fixed_length: 3,
 
 				has_limits: TRUE,
 				limits: {
 					int_min_val: 0,
-					int_max_val: 10000
-				}
+					int_max_val: 10000,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
 			},
-			{ /* tinyint(3) */
-				name: "monitor",
+			{ /* tinytext */
+				name: "Title",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 100,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "First_Name",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 50,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Surname",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 50,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Job_Title",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 150,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Company",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 155,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Email",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 100,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Country",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 50,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Stakeholder_Group",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 50,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Other_Stakeholder",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 100,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Sector_Involvement",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 50,
+					char_ascii_only: TRUE,
+					can_be_null: FALSE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Address_1",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 255,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Address_2",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 255,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Address_3",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 255,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Town_City",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 255,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Post_Code",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 255,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Telephone",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 255,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "Third_Parties",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 255,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* tinytext */
+				name: "IP_Address",
+				type: FT_TEXT,
+				min_length: 0,
+				max_length: 255,
+
+				has_limits: TRUE,
+				limits: {
+					char_min_len: 0,
+					char_max_len: 255,
+					char_ascii_only: TRUE,
+					can_be_null: TRUE
+				},
+
+				can_be_null: TRUE
+			},
+			{ /* date */
+				name: "Reg_Date",
+				type: FT_DATE,
+				fixed_length: 8,
+
+				can_be_null: TRUE
+			},
+			{ /* date */
+				name: "Updated_Date",
+				type: FT_DATE,
+				fixed_length: 8,
+
+				can_be_null: TRUE
+			},
+			{ /* tinyint(4) */
+				name: "Suspended",
 				type: FT_INT,
 				fixed_length: 1,
-				can_be_null: FALSE,
 
-				has_limits: TRUE,
-				limits: {
-					int_min_val: 0,
-					int_max_val: 10000
-				}
+				can_be_null: FALSE
 			},
 			{ type: FT_NONE }
 		}

@@ -74,6 +74,7 @@ unsigned long long int get_uint_value(field_def_t *field, byte *value) {
 	switch (field->fixed_length) {
 		case 1: return mach_read_from_1(value);
 		case 2: return mach_read_from_2(value);
+		case 3: return mach_read_from_3(value) & 0x3FFFFFUL;
 		case 4: return mach_read_from_4(value);
 		case 8: return make_ulonglong(mach_read_from_8(value));
 	}
@@ -81,12 +82,13 @@ unsigned long long int get_uint_value(field_def_t *field, byte *value) {
 }
 
 /*******************************************************************/
-unsigned long long int get_int_value(field_def_t *field, byte *value) {
+long long int get_int_value(field_def_t *field, byte *value) {
 	switch (field->fixed_length) {
-		case 1: return mach_read_from_1(value) ^ 1<<7;
-		case 2: return mach_read_from_2(value) ^ 1<<15;
-		case 4: return mach_read_from_4(value) ^ 1L<<31;
-		case 8: return make_longlong(mach_read_from_8(value)) ^ 1LL << 63;
+		case 1: return mach_read_from_1(value) & ~(1<<7);
+		case 2: return mach_read_from_2(value) & ~(1<<15);
+		case 3: return mach_read_from_3(value) & 0x3FFFFFUL & ~(1L<<23);
+		case 4: return mach_read_from_4(value) & ~(1L<<31);
+		case 8: return make_longlong(mach_read_from_8(value)) & ~(1LL<<63);
 	}
 	return 0;
 }
@@ -115,6 +117,7 @@ void print_field_value(byte *value, ulint len, field_def_t *field) {
 			switch (field->fixed_length) {
 				case 1: printf("%u", mach_read_from_1(value)); break;
 				case 2: printf("%u", mach_read_from_2(value)); break;
+				case 3: printf("%lu", mach_read_from_3(value) & 0x3FFFFFUL); break;
 				case 4: printf("%lu", mach_read_from_4(value)); break;
 				case 8: printf("%llu", make_ulonglong(mach_read_from_8(value))); break;
 				default: printf("uint_undef(%d)", field->fixed_length);
@@ -123,10 +126,11 @@ void print_field_value(byte *value, ulint len, field_def_t *field) {
 
 		case FT_INT:
 			switch (field->fixed_length) {
-				case 1: printf("%d", mach_read_from_1(value) ^ 1<<7); break;
-				case 2: printf("%i", mach_read_from_2(value) ^ 1<<15); break;
-				case 4: printf("%li", mach_read_from_4(value) ^ 1L<<31); break;
-				case 8: printf("%lli", make_longlong(mach_read_from_8(value)) ^ 1LL << 63); break;
+				case 1: printf("%d", mach_read_from_1(value) & ~(1<<7)); break;
+				case 2: printf("%i", mach_read_from_2(value) & ~(1<<15)); break;
+				case 3: printf("%li", mach_read_from_3(value) & 0x3FFFFFUL & ~(1L<<23)); break;
+				case 4: printf("%li", mach_read_from_4(value) & ~(1L<<31)); break;
+				case 8: printf("%lli", make_longlong(mach_read_from_8(value)) & ~(1LL<<63)); break;
 				default: printf("int_undef(%d)", field->fixed_length);
 			}
 			break;
@@ -208,12 +212,6 @@ ulint process_ibrec(page_t *page, rec_t *rec, table_def_t *table, ulint *offsets
 	// Print table name
 	if (debug) {
 		printf("Processing record %p from table '%s'\n", rec, table->name);
-		printf("Field offsets: ");
-		for(i = 0; i < rec_offs_n_fields(offsets); i++) {
-			printf("%lu ", rec_offs_base(offsets)[i]);
-		}
-		printf("\n");
-
 		rec_print_new(stdout, rec, offsets);
 	} else {
 		printf("%s\t", table->name);
@@ -248,24 +246,34 @@ ibool check_datetime(ulonglong ldate) {
 	int year, month, day, hour, min, sec;
 	
 	ldate &= ~(1ULL << 63);
-	
+	if (debug) printf("DATETIME=%llu ", ldate);
+
+	if (ldate == 0) return TRUE;
+	printf("DATE=OK ");
+
 	sec = ldate % 100; ldate /= 100;
 	if (sec < 0 || sec > 59) return FALSE;
+	printf("SEC=OK ");
 	
 	min = ldate % 100; ldate /= 100;
 	if (min < 0 || min > 59) return FALSE;
+	printf("MIN=OK ");
 	
 	hour = ldate % 100; ldate /= 100;
 	if (hour < 0 || hour > 23) return FALSE;
+	printf("HOUR=OK ");
 
 	day = ldate % 100; ldate /= 100;
 	if (day < 0 || day > 31) return FALSE;
+	printf("DAY=OK ");
 
 	month = ldate % 100; ldate /= 100;
 	if (month < 1 || month > 12) return FALSE;
+	printf("MONTH=OK ");
 
 	year = ldate % 10000;
-	if (year < 1980 || year > 2099) return FALSE;
+	if (year < 1900 || year > 2099) return FALSE;
+	printf("YEAR=OK ");
 
 	return TRUE;
 }
@@ -285,23 +293,35 @@ static ibool check_field_limits(field_def_t *field, byte *value, ulint len) {
 	long long int int_value;
 	unsigned long long int uint_value;
 	
-	if (len == UNIV_SQL_NULL) return TRUE;
-	
 	switch (field->type) {
 		case FT_INT:
 			int_value = get_int_value(field, value);
+			if (debug) printf("INT(%i)=%lli ", field->fixed_length, int_value);
 			if (int_value < field->limits.int_min_val) return FALSE;
 			if (int_value > field->limits.int_max_val) return FALSE;
 			break;
 
 		case FT_UINT:
 			uint_value = get_uint_value(field, value);
+			if (debug) printf("UINT(%i)=%llu ", field->fixed_length, uint_value);
 			if (uint_value < field->limits.uint_min_val) return FALSE;
 			if (uint_value > field->limits.uint_max_val) return FALSE;
 			break;
 
 		case FT_TEXT:
 		case FT_CHAR:
+			if (debug) {
+				if (len != UNIV_SQL_NULL) {
+					if (len <= 30) {
+						ut_print_buf(stdout, value, len);
+					} else {
+						ut_print_buf(stdout, value, 30);
+						printf("...(truncated)");
+					}
+				} else {
+					printf("SQL NULL ");
+				}				
+			}
 			if (len < field->limits.char_min_len) return FALSE;
 			if (len > field->limits.char_max_len) return FALSE;
 			if (field->limits.char_ascii_only && !check_char_ascii((char*)value, len)) return FALSE;
@@ -315,38 +335,72 @@ static ibool check_field_limits(field_def_t *field, byte *value, ulint len) {
 static ibool check_constraints(rec_t *rec, table_def_t* table, ulint* offsets) {
 	int i;
 	
+	if (debug) {
+		printf("\nChecking constraints for a row (%s):", table->name);
+		ut_print_buf(stdout, rec, 100);
+	}
+	
 	// Check every field
 	for(i = 0; i < table->fields_count; i++) {
 		// Get field value pointer and field length
 		ulint len;
 		byte *field = rec_get_nth_field(rec, offsets, i, &len);
-		
-		// Validate date fields
-		if (table->fields[i].type == FT_DATETIME || table->fields[i].type == FT_DATE) {
-			if (!check_datetime(make_longlong(mach_read_from_8(field)))) return FALSE;
+		if (debug) printf("\n - field %s(%lu):", table->fields[i].name, len);
+
+		// Skip null fields from type checks and fail if null is not allowed by data limits
+		if (len == UNIV_SQL_NULL) {
+			if (table->fields[i].has_limits && !table->fields[i].limits.can_be_null) {
+				if (debug) printf("data can't be NULL");
+				return FALSE;
+			}
+			continue;
 		}
 		
+		// Validate date fields
+/*		if (table->fields[i].type == FT_DATETIME || table->fields[i].type == FT_DATE) {
+			if (!check_datetime(make_longlong(mach_read_from_8(field)))) {
+				if (debug) printf("DATETIME check failed!\n");
+				return FALSE;
+			}
+		}
+*/
+		
 		if (!table->fields[i].has_limits) continue;
-		if (!check_field_limits(&(table->fields[i]), field, len)) return FALSE;
+		if (!check_field_limits(&(table->fields[i]), field, len)) {
+			if (debug) printf("LIMITS check failed!\n");
+			return FALSE;
+		}
 	}
-	
+
+	if (debug) printf("\nRow looks OK!\n");
 	return TRUE;
 }
 
 /*******************************************************************/
 ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 	int i;
+
+	if (debug) {
+		printf("\nChecking field lengths for a row (%s):", table->name);
+		printf("OFFSERS: ");
+		for(i = 0; i < rec_offs_n_fields(offsets); i++) {
+			printf("%lu ", rec_offs_base(offsets)[i]);
+		}
+//		printf("\n");
+	}
 	
 	// check every field
 	for(i = 0; i < table->fields_count; i++) {
 		// Get field size
 		ulint len = rec_offs_nth_size(offsets, i);
+		if (debug) printf("\n - field %s(%lu):", table->fields[i].name, len);
 		
 		// If field is null
-		if (len == UNIV_SQL_NULL) {
+		if (len == UNIV_SQL_NULL || len == 0) {
 			// Check if it can be null and jump to a next field if it is OK
 			if (table->fields[i].can_be_null) continue;
 			// Invalid record where non-nullable field is NULL
+			if (debug) printf("Can't be NULL!\n");
 			return FALSE;
 		} 
 		
@@ -355,20 +409,28 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 			// Check if size is the same and jump to the next field if it is OK
 			if (len == table->fields[i].fixed_length) continue;
 			// Invalid fixed length field
+			if (debug) printf("Invalid fixed length field!\n");
 			return FALSE;
 		}
 		
 		// Check if has externally stored data 
 		if (rec_offs_nth_extern(offsets, i)) {
-			if (debug) printf("\nEXTERNALLY STORED VALUE FOUND!\n");
-			if (table->fields[i].type != FT_CHAR) return FALSE;
-			continue;
+			if (debug) printf("\nEXTERNALLY STORED VALUE FOUND in field %i\n", i);
+			if (table->fields[i].type == FT_TEXT || table->fields[i].type == FT_BLOB) continue;
+			if (debug) printf("Invalid external data flag!\n");
+			return FALSE;
 		}
 		
 		// Check size limits for varlen fields
-		if (len < table->fields[i].min_length || len > table->fields[i].max_length) return FALSE;
+		if (len < table->fields[i].min_length || len > table->fields[i].max_length) {
+			if (debug) printf("Length limits check failed!\n");
+			return FALSE;
+		}
+
+		if (debug) printf("OK!");
 	}
-	
+
+	if (debug) printf("\n");
 	return TRUE;
 }
 
@@ -446,8 +508,14 @@ static ibool ibrec_init_offsets(page_t *page, rec_t* rec, table_def_t* table, ul
 			len = offs += field->fixed_length;
 		}
 	resolved:
+		if (rec + offs - page > UNIV_PAGE_SIZE) {
+			if (debug) printf("Invalid offset for field %i: %li\n", i, offs);
+			return FALSE;
+		}
 		rec_offs_base(offsets)[i + 1] = len;
 	} while (++i < table->fields_count);
+
+	return TRUE;
 }
 
 
@@ -455,7 +523,6 @@ static ibool ibrec_init_offsets(page_t *page, rec_t* rec, table_def_t* table, ul
 /*******************************************************************/
 ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *offsets) {
 	ulint offset, data_size;
-	ibool ok;
 
 	// Check if given origin is valid
 	offset = rec - page;
@@ -463,13 +530,13 @@ ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *of
 	if (debug) printf("ORIGIN=OK ");
 
 	// Skip if relative pointer to the next record is too large
-	if (mach_read_from_2(rec-2) > UNIV_PAGE_SIZE - offset) return FALSE;
-	if (debug) printf("NEXT=OK ");
+//	if (mach_read_from_2(rec-2) > UNIV_PAGE_SIZE - offset) return FALSE;
+//	if (debug) printf("NEXT=OK ");
 
 	// Get field offsets for current table
-	if (!(ok = ibrec_init_offsets(page, rec, table, offsets))) return FALSE;
+	if (!ibrec_init_offsets(page, rec, table, offsets)) return FALSE;
 	if (debug) printf("OFFSETS=OK ");
-	
+
 	// Skip non-deleted records
 	if (deleted_records_only && !rec_get_deleted_flag(rec, page_is_comp(page))) return FALSE;
 	if (debug) printf("DELETED=OK ");
@@ -507,6 +574,7 @@ void process_ibpage(page_t *page) {
 
 	// Find possible data area start point (at least 5 bytes of utility data)
 	offset = 5;
+	offset = 0x93;
 	if (debug) printf("Starting offset: %lu\n", offset);
 	
 	// Walk through all possible positions to the end of page 
@@ -531,6 +599,7 @@ void process_ibpage(page_t *page) {
 			}
 		}
 
+//		break;
 		// Check from next byte
 		offset++;
 	}
@@ -568,6 +637,7 @@ void init_table_defs() {
 		table->min_rec_header_len += (table->n_nullable + 7) / 8;
 		
 		if (debug) {
+			printf(" - total fields: %i\n", table->fields_count);
 			printf(" - nullable fields: %i\n", table->n_nullable);
 			printf(" - minimum header size: %i\n", table->min_rec_header_len);
 			printf("\n");
