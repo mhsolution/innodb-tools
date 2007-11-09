@@ -582,7 +582,6 @@ void process_ibpage(page_t *page) {
 
 	// Find possible data area start point (at least 5 bytes of utility data)
 	offset = 5;
-	offset = 0x416;
 	if (debug) printf("Starting offset: %lu\n", offset);
 	
 	// Walk through all possible positions to the end of page 
