@@ -5,9 +5,9 @@ use DBI;
 use Data::Dumper;
 use POSIX;
 
-my $db_name = "corporateregister";
+my $db_name = "triplejack2";
 my $db_host = "127.0.0.1";
-my $db_port = 3306;
+my $db_port = 13306;
 my $db_user = "scoundrel";
 my $db_pass = "";
 
@@ -133,7 +133,7 @@ sub DumpFieldLow {
 	if ($info{ParsedType} eq 'FT_INT' && $info{Name} =~ /id$/i) {
 		printf("\t\t\t\thas_limits: TRUE,\n");
 		printf("\t\t\t\tlimits: {\n");
-		printf("\t\t\t\t\tint_min_val: 0,\n");
+		printf("\t\t\t\t\tint_min_val: -30000,\n");
 		printf("\t\t\t\t\tint_max_val: 30000\n");
 		printf("\t\t\t\t},\n\n");
 	} 
@@ -143,6 +143,14 @@ sub DumpFieldLow {
 		printf("\t\t\t\tlimits: {\n");
 		printf("\t\t\t\t\tuint_min_val: 0,\n");
 		printf("\t\t\t\t\tuint_max_val: 30000\n");
+		printf("\t\t\t\t},\n\n");
+	} 
+
+	if ($info{ParsedType} eq 'FT_ENUM') {
+		printf("\t\t\t\thas_limits: TRUE,\n");
+		printf("\t\t\t\tlimits: {\n");
+		printf("\t\t\t\t\tenum_values_count: %d,\n", scalar(@{$info{Values}}));
+		printf("\t\t\t\t\tenum_values: { \"%s\" }\n", join('", "', @{$info{Values}}));
 		printf("\t\t\t\t},\n\n");
 	} 
 
@@ -165,11 +173,12 @@ sub DumpField($$) {
 	}
 	
 	$info{Type} = $field->{Type};
+	$info{Values} = $type_info->{values};
 	$info{ParsedType} = $type_info->{type};
 	$info{MinLen} = $type_info->{min_len};
 	$info{MaxLen} = $type_info->{max_len};
 	$info{FixedLen} = $type_info->{fixed_len};
-
+	
 	DumpFieldLow(%info);
 }
 
@@ -239,15 +248,16 @@ sub ParseFieldType($) {
 	}
 
 	if ($type =~ /^FLOAT/i) {
-		return { type => 'FT_FLOAT', min_len => 4, max_len => 4 };
+		return { type => 'FT_FLOAT', fixed_len => 4 };
 	}
 
 	if ($type =~ /^DOUBLE/i) {
 		return { type => 'FT_DOUBLE', fixed_len => 8 };
 	}
 
-	if ($type =~ /^ENUM/i) {
-		return { type => 'FT_UINT', fixed_len => 1 };
+	if ($type =~ /^ENUM\(\'(.*)\'\)/i) {
+		my @enum_values = split(/[\'\"]\,[\'\"]/, $1);
+		return { type => 'FT_ENUM', fixed_len => 1, values => \@enum_values };
 	}
 
 	if ($type =~ /^DECIMAL\((\d+),\s*(\d+)\)/i) {

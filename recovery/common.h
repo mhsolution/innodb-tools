@@ -1,6 +1,9 @@
 #ifndef common_h
 #define common_h
 
+#define MAX_TABLE_FIELDS 500
+#define MAX_ENUM_VALUES 100
+
 // Field limits type
 typedef struct field_limits {
 	// In opposite to field.can_be_null, this field sets 
@@ -25,6 +28,10 @@ typedef struct field_limits {
 	
 	// Dates validation
 	ibool date_validation;
+	
+	// Enum values
+	char *enum_values[MAX_ENUM_VALUES];
+	uint enum_values_count;
 } field_limits_t;
 
 // Table definition types
@@ -38,7 +45,7 @@ typedef enum field_type {
 	FT_DOUBLE,		// supported
 	FT_DATE,		// supported
 	FT_DATETIME,	// supported
-	FT_ENUM,		// supported (w/o values substitution)
+	FT_ENUM,		// supported
 	FT_SET,
 	FT_BLOB,
 	FT_TEXT,		// supported (w/o externals)
@@ -58,8 +65,6 @@ typedef struct field_def {
 	ibool has_limits;
 	field_limits_t limits;
 } field_def_t;
-
-#define MAX_TABLE_FIELDS 50
 
 typedef struct table_def {
 	char *name;

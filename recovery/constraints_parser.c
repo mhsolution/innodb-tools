@@ -70,6 +70,11 @@ void print_date(ulonglong ldate) {
 }
 
 /*******************************************************************/
+void print_enum(int value, field_def_t *field) {
+	printf("\"%s\"", field->limits.enum_values[value-1]);
+}
+
+/*******************************************************************/
 unsigned long long int get_uint_value(field_def_t *field, byte *value) {
 	switch (field->fixed_length) {
 		case 1: return mach_read_from_1(value);
@@ -149,6 +154,10 @@ void print_field_value(byte *value, ulint len, field_def_t *field) {
 
 		case FT_DATE:
 			print_date(make_longlong(mach_read_from_8(value)));
+			break;
+
+		case FT_ENUM:
+			print_enum(mach_read_from_1(value), field);
 			break;
 
 		default:
@@ -281,6 +290,7 @@ ibool check_datetime(ulonglong ldate) {
 /*******************************************************************/
 static ibool check_char_ascii(char *value, ulint len) {
 	char *p = value;
+	if (!len) return TRUE;
 	do { 
 		if (!isprint(*p) && *p != '\n' && *p != '\t' && *p != '\r') return FALSE;
 	} while (++p < value + len);
@@ -290,6 +300,7 @@ static ibool check_char_ascii(char *value, ulint len) {
 /*******************************************************************/
 static ibool check_char_digits(char *value, ulint len) {
 	char *p = value;
+	if (!len) return TRUE;
 	do { 
 		if (!isnumber(*p)) return FALSE;
 	} while (++p < value + len);
@@ -341,6 +352,12 @@ static ibool check_field_limits(field_def_t *field, byte *value, ulint len) {
 		case FT_DATETIME:
 			date_value = make_longlong(mach_read_from_8(value));
 			if (!check_datetime(date_value)) return FALSE;
+			break;
+		
+		case FT_ENUM:
+			int_value = get_int_value(field, value);
+			if (debug) printf("ENUM=%lli ", int_value);
+			if (int_value < 1 || int_value > field->limits.enum_values_count) return FALSE;
 			break;
 	}
 
@@ -404,7 +421,7 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 		if (debug) printf("\n - field %s(%lu):", table->fields[i].name, len);
 		
 		// If field is null
-		if (len == UNIV_SQL_NULL || len == 0) {
+		if (len == UNIV_SQL_NULL) {
 			// Check if it can be null and jump to a next field if it is OK
 			if (table->fields[i].can_be_null) continue;
 			// Invalid record where non-nullable field is NULL
@@ -472,7 +489,7 @@ static ibool ibrec_init_offsets(page_t *page, rec_t* rec, table_def_t* table, ul
 
 		/* nullable field => read the null flag */
 		if (field->can_be_null) {
-
+//			if (debug) printf("nullable field => read the null flag\n");
 			if (!(byte)null_mask) {
 				nulls--;
 				null_mask = 1;
@@ -491,6 +508,7 @@ static ibool ibrec_init_offsets(page_t *page, rec_t* rec, table_def_t* table, ul
 		}
 
 		if (!field->fixed_length) {
+//			if (debug) printf("Variable-length field: read the length\n");
 			/* Variable-length field: read the length */
 			len = *lens--;
 
@@ -520,6 +538,7 @@ static ibool ibrec_init_offsets(page_t *page, rec_t* rec, table_def_t* table, ul
 			if (debug) printf("Invalid offset for field %i: %li\n", i, offs);
 			return FALSE;
 		}
+//		if (debug) printf("Initializing offset for field #%li: %li\n", i, len);
 		rec_offs_base(offsets)[i + 1] = len;
 	} while (++i < table->fields_count);
 
@@ -582,6 +601,7 @@ void process_ibpage(page_t *page) {
 
 	// Find possible data area start point (at least 5 bytes of utility data)
 	offset = 5;
+//	offset = 0x9B;
 	if (debug) printf("Starting offset: %lu\n", offset);
 	
 	// Walk through all possible positions to the end of page 
