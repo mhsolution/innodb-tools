@@ -33,10 +33,10 @@ mysql-source/config.h:
 	cd mysql-source && ./configure --without-docs --without-man --without-bench --without-extra-tools
 
 mysql-source/include/my_config.h: mysql-source/config.h
-	cd mysql-source/include && make my_config.h
+	cd mysql-source/include && $(MAKE) my_config.h
 
 lib/libut.a: mysql-source/include/my_config.h
-	cd mysql-source/innobase/ut && make libut.a
+	cd mysql-source/innobase/ut && $(MAKE) libut.a
 	ln -fs ../mysql-source/innobase/ut/libut.a lib/libut.a
 
 # CLEAN
@@ -54,6 +54,5 @@ clean:
 distclean: clean
 	rm -rf innodb_recovery
 	rm -f innodb_recovery.tar.gz
-	cd mysql-source && make distclean
+	cd mysql-source && (test -f Makefile && $(MAKE) -i distclean) || true
 	rm -f mysql-source/Docs/Makefile mysql-source/man/Makefile mysql-source/sql-bench/Makefile
-	
