@@ -403,6 +403,7 @@ int open_ibfile(char *fname) {
 	return fn;
 }
 
+/*******************************************************************/
 void usage() {
 	error(
 	  "Usage: ./constraints_parser [-dDh] -f <innodb_datafile>\n"
@@ -423,7 +424,7 @@ int main(int argc, char **argv) {
 
 	setbuf(stdout, NULL);
 
-	while ((ch = getopt(argc, argv, "hdDVf:")) != -1) {
+	while ((ch = getopt(argc, argv, "45hdDVf:")) != -1) {
 		switch (ch) {
 			case 'd':
 				deleted_pages_only = 1;
