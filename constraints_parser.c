@@ -8,9 +8,9 @@
 #include <string.h>
 #include <sys/dir.h>
 
-#include "univ.i"
-#include "page0page.h"
-#include "rem0rec.h"
+#include <univ.i>
+#include <page0page.h>
+#include <rem0rec.h>
 
 #include "error.h"
 #include "common.h"
