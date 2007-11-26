@@ -80,8 +80,7 @@ while (my $row = $sth->fetchrow_arrayref) {
 	DumpTableDef($table, \@fields, \@pk_fields);
 }
 
-print("};\n\nconst int table_definitions_cnt = sizeof(table_definitions) / sizeof(table_def_t);\n\n");
-print("#endif\n");
+print("};\n\n#endif\n");
 
 exit(0);
 
