@@ -1,14 +1,14 @@
 #include <stdio.h>
 
-#include "univ.i"
-#include "page0page.h"
-#include "rem0rec.h"
+#include <univ.i>
+#include <page0page.h>
+#include <rem0rec.h>
 
 int table_definitions_cnt;
 int record_extra_bytes;
 
-#include "tables_dict.h"
-#include "table_defs.h"
+#include <tables_dict.h>
+#include <table_defs.h>
 
 extern bool deleted_pages_only;
 extern bool debug;

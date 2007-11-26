@@ -6,8 +6,8 @@
 #include <fcntl.h>
 #include <time.h>
 
-#include "error.h"
-#include "tables_dict.h"
+#include <error.h>
+#include <tables_dict.h>
 
 static time_t timestamp = 0;
 

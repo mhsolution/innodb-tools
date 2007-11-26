@@ -8,10 +8,10 @@
 #include <string.h>
 #include <sys/dir.h>
 
-#include "error.h"
-#include "tables_dict.h"
-#include "print_data.h"
-#include "check_data.h"
+#include <error.h>
+#include <tables_dict.h>
+#include <print_data.h>
+#include <check_data.h>
 
 // Global flags from getopt
 bool deleted_pages_only = 0;

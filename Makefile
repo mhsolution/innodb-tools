@@ -1,26 +1,31 @@
 # Uncomment to build static binaries
 #CFLAGS=-static
 
-INCLUDES=-I mysql-source/include -I mysql-source/innobase/include
+INCLUDES=-I include -I mysql-source/include -I mysql-source/innobase/include
 
 all: constraints_parser page_parser
 
-print_data.o: print_data.h tables_dict.h
-	gcc $(CFLAGS) -g $(INCLUDES) -c print_data.c
+# LIBS
 
-check_data.o: check_data.h tables_dict.h
-	gcc $(CFLAGS) -g $(INCLUDES) -c check_data.c
+lib: 
+	mkdir lib
 
-tables_dict.o: tables_dict.h tables_dict.c table_defs.h mysql-source/include/my_config.h
-	gcc $(CFLAGS) -g $(INCLUDES) -c tables_dict.c
+lib/print_data.o: lib print_data.c include/print_data.h include/tables_dict.h
+	gcc $(CFLAGS) -g $(INCLUDES) -c print_data.c -o lib/print_data.o
+
+lib/check_data.o: lib check_data.c include/check_data.h include/tables_dict.h
+	gcc $(CFLAGS) -g $(INCLUDES) -c check_data.c -o lib/check_data.o
+
+lib/tables_dict.o: lib tables_dict.c include/tables_dict.h include/table_defs.h mysql-source/include/my_config.h
+	gcc $(CFLAGS) -g $(INCLUDES) -c tables_dict.c -o lib/tables_dict.o
 
 # BINARIES
 
-page_parser: page_parser.c error.h tables_dict.o libut.a
-	gcc $(CFLAGS) -g $(INCLUDES) -o page_parser page_parser.c tables_dict.o libut.a
+page_parser: page_parser.c include/error.h lib/tables_dict.o lib/libut.a
+	gcc $(CFLAGS) -g $(INCLUDES) -o page_parser page_parser.c lib/tables_dict.o lib/libut.a
 
-constraints_parser: constraints_parser.c error.h tables_dict.o print_data.o check_data.o libut.a
-	gcc $(CFLAGS) -g $(INCLUDES) -o constraints_parser constraints_parser.c tables_dict.o print_data.o check_data.o libut.a
+constraints_parser: constraints_parser.c include/error.h lib/tables_dict.o lib/print_data.o lib/check_data.o lib/libut.a
+	gcc $(CFLAGS) -g $(INCLUDES) -o constraints_parser constraints_parser.c lib/tables_dict.o lib/print_data.o lib/check_data.o lib/libut.a
 
 # DEPENDENCIES FROM MYSQL
 
@@ -30,9 +35,11 @@ mysql-source/config.h:
 mysql-source/include/my_config.h: mysql-source/config.h
 	cd mysql-source/include && make my_config.h
 
-libut.a: mysql-source/include/my_config.h
+lib/libut.a: mysql-source/include/my_config.h
 	cd mysql-source/innobase/ut && make libut.a
-	ln -fs mysql-source/innobase/ut/libut.a
+	ln -fs ../mysql-source/innobase/ut/libut.a lib/libut.a
+
+# CLEAN
 
 dist:
 	mkdir -p innodb_recovery
@@ -41,11 +48,12 @@ dist:
 	rm -rf innodb_recovery
     
 clean: 
-	rm -f page_parser constraints_parser *.o
-	rm -rf constraints_parser.dSYM page_parser.dSYM
+	rm -f page_parser constraints_parser
+	rm -rf lib constraints_parser.dSYM page_parser.dSYM
 
 distclean: clean
 	rm -rf innodb_recovery
 	rm -f innodb_recovery.tar.gz
-	rm -f libut.a
 	cd mysql-source && make distclean
+	rm -f mysql-source/Docs/Makefile mysql-source/man/Makefile mysql-source/sql-bench/Makefile
+	
