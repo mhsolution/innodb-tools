@@ -1,6 +1,10 @@
 #ifndef common_h
 #define common_h
 
+#include <univ.i>
+#include <page0page.h>
+#include <rem0rec.h>
+
 #define MAX_TABLE_FIELDS 500
 #define MAX_ENUM_VALUES 100
 
@@ -75,5 +79,13 @@ typedef struct table_def {
 	int n_nullable;
 	int min_rec_header_len;
 } table_def_t;
+
+#ifndef table_definitions_cnt
+    extern table_def_t table_definitions[];
+    extern int table_definitions_cnt;
+    extern int record_extra_bytes;
+#endif
+
+void init_table_defs();
 
 #endif

@@ -1,11 +1,7 @@
 #ifndef _check_data_h_
 #define _check_data_h_
 
-#include <univ.i>
-#include <page0page.h>
-#include <rem0rec.h>
-
-#include "common.h"
+#include "tables_dict.h"
 
 extern bool debug;
 

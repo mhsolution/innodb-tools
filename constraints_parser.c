@@ -8,13 +8,8 @@
 #include <string.h>
 #include <sys/dir.h>
 
-#include <univ.i>
-#include <page0page.h>
-#include <rem0rec.h>
-
 #include "error.h"
-#include "common.h"
-#include "table_defs.h"
+#include "tables_dict.h"
 #include "print_data.h"
 #include "check_data.h"
 
@@ -104,8 +99,8 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 	int i;
 
 	if (debug) {
-		printf("\nChecking field lengths for a row (%s):", table->name);
-		printf("OFFSERS: ");
+		printf("\nChecking field lengths for a row (%s): ", table->name);
+		printf("OFFSETS: ");
 		for(i = 0; i < rec_offs_n_fields(offsets); i++) {
 			printf("%lu ", rec_offs_base(offsets)[i]);
 		}
@@ -158,7 +153,7 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 }
 
 /*******************************************************************/
-static ibool ibrec_init_offsets(page_t *page, rec_t* rec, table_def_t* table, ulint* offsets) {
+static ibool ibrec_init_offsets_new(page_t *page, rec_t* rec, table_def_t* table, ulint* offsets) {
 	ulint i = 0;
 	ulint offs;
 	const byte* nulls;
@@ -236,14 +231,70 @@ static ibool ibrec_init_offsets(page_t *page, rec_t* rec, table_def_t* table, ul
 			if (debug) printf("Invalid offset for field %i: %li\n", i, offs);
 			return FALSE;
 		}
-//		if (debug) printf("Initializing offset for field #%li: %li\n", i, len);
 		rec_offs_base(offsets)[i + 1] = len;
 	} while (++i < table->fields_count);
 
 	return TRUE;
 }
 
+/*******************************************************************/
+static ibool ibrec_init_offsets_old(page_t *page, rec_t* rec, table_def_t* table, ulint* offsets) {
+	ulint i = 0;
+	ulint offs;
 
+	// First field is 0 bytes from origin point
+	rec_offs_base(offsets)[0] = 0;
+	
+	// Init first bytes
+	rec_offs_set_n_fields(offsets, table->fields_count);
+		
+	/* Old-style record: determine extra size and end offsets */
+	offs = REC_N_OLD_EXTRA_BYTES;
+	if (rec_get_1byte_offs_flag(rec)) {
+		offs += rec_offs_n_fields(offsets);
+		*rec_offs_base(offsets) = offs;
+		/* Determine offsets to fields */
+		do {
+			offs = rec_1_get_field_end_info(rec, i);
+			if (offs & REC_1BYTE_SQL_NULL_MASK) {
+				offs &= ~REC_1BYTE_SQL_NULL_MASK;
+				offs |= REC_OFFS_SQL_NULL;
+			}
+
+    		if (rec + offs - page > UNIV_PAGE_SIZE) {
+    			if (debug) printf("Invalid offset for field %i: %li\n", i, offs);
+    			return FALSE;
+    		}
+
+			rec_offs_base(offsets)[1 + i] = offs;
+		} while (++i < rec_offs_n_fields(offsets));
+	} else {
+		offs += 2 * rec_offs_n_fields(offsets);
+		*rec_offs_base(offsets) = offs;
+		/* Determine offsets to fields */
+		do {
+			offs = rec_2_get_field_end_info(rec, i);
+			if (offs & REC_2BYTE_SQL_NULL_MASK) {
+				offs &= ~REC_2BYTE_SQL_NULL_MASK;
+				offs |= REC_OFFS_SQL_NULL;
+			}
+
+			if (offs & REC_2BYTE_EXTERN_MASK) {
+				offs &= ~REC_2BYTE_EXTERN_MASK;
+				offs |= REC_OFFS_EXTERNAL;
+			}
+
+    		if (rec + offs - page > UNIV_PAGE_SIZE) {
+    			if (debug) printf("Invalid offset for field %i: %li\n", i, offs);
+    			return FALSE;
+    		}
+
+			rec_offs_base(offsets)[1 + i] = offs;
+		} while (++i < rec_offs_n_fields(offsets));
+	}
+	
+	return TRUE;	
+}
 
 /*******************************************************************/
 ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *offsets) {
@@ -251,15 +302,12 @@ ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *of
 
 	// Check if given origin is valid
 	offset = rec - page;
-	if (offset < 5 + table->min_rec_header_len) return FALSE;
+	if (offset < record_extra_bytes + table->min_rec_header_len) return FALSE;
 	if (debug) printf("ORIGIN=OK ");
 
-	// Skip if relative pointer to the next record is too large
-//	if (mach_read_from_2(rec-2) > UNIV_PAGE_SIZE - offset) return FALSE;
-//	if (debug) printf("NEXT=OK ");
-
 	// Get field offsets for current table
-	if (!ibrec_init_offsets(page, rec, table, offsets)) return FALSE;
+	if (process_compact && !ibrec_init_offsets_new(page, rec, table, offsets)) return FALSE;
+	if (process_redundant && !ibrec_init_offsets_old(page, rec, table, offsets)) return FALSE;
 	if (debug) printf("OFFSETS=OK ");
 
 	// Skip non-deleted records
@@ -281,6 +329,21 @@ ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *of
 }
 
 /*******************************************************************/
+bool check_page_format(page_t *page) {
+	if (process_redundant && page_is_comp(page)) {
+		if (debug) printf("Page is in COMPACT format while we're looking for REDUNDANT - skipping\n");
+		return FALSE;
+	}
+
+	if (process_compact && !page_is_comp(page)) {
+		if (debug) printf("Page is in REDUNDANT format while we're looking for COMPACT - skipping\n");
+		return FALSE;
+	}
+	
+    return TRUE;
+}
+
+/*******************************************************************/
 void process_ibpage(page_t *page) {
 	ulint page_id;
 	rec_t *origin;
@@ -291,20 +354,16 @@ void process_ibpage(page_t *page) {
 	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
 	if (debug) printf("Page id: %lu\n", page_id);
 
-	// At this moment we support COMPACT pages only
-	if (!page_is_comp(page)) {
-		if (debug) printf("Page is in old format - skipping\n");
-		return;
-	}
+	// Check requested and actual formats
+    if (!check_page_format(page)) return;
 
 	// Find possible data area start point (at least 5 bytes of utility data)
-	offset = 5;
-//	offset = 0x9B;
-	if (debug) printf("Starting offset: %lu\n", offset);
+	offset = record_extra_bytes;
+	if (debug) printf("Starting offset: %lu. Checking %d table definitions.\n", offset, table_definitions_cnt);
 	
 	// Walk through all possible positions to the end of page 
 	// (start of directory - extra bytes of the last rec)
-	while (offset < UNIV_PAGE_SIZE - REC_N_NEW_EXTRA_BYTES - 1) {
+	while (offset < UNIV_PAGE_SIZE - record_extra_bytes) {
 		// Get record pointer
 		origin = page + offset;
 		if (debug) printf("\nChecking offset: %lu: ", offset);
@@ -317,56 +376,15 @@ void process_ibpage(page_t *page) {
 
 			// Check if origin points to a valid record
 			if (check_for_a_record(page, origin, &table, offsets) && check_constraints(origin, &table, offsets)) {
-				if (debug) printf("\n---------------------------------------------------\n"
-				       			  "PAGE%lu: Found a table %s record: %p (offset = %lu)\n", page_id, table.name, origin, offset);
-				offset += process_ibrec(page, origin, &table, offsets);
-				break;
-			}
+			    if (debug) printf("\n---------------------------------------------------\n"
+			       			     "PAGE%lu: Found a table %s record: %p (offset = %lu)\n", page_id, table.name, origin, offset);
+			    offset += process_ibrec(page, origin, &table, offsets);
+			    break;
+		    }
 		}
 
-//		break;
 		// Check from next byte
 		offset++;
-	}
-}
-
-/*******************************************************************/
-void init_table_defs() {
-	int i, j;
-
-	if (debug) printf("Initializing table definitions...\n");
-	
-	for (i = 0; i < table_definitions_cnt; i++) {
-		table_def_t *table = &(table_definitions[i]);
-		if (debug) printf("Processing table: %s\n", table->name);
-		
-		table->n_nullable = 0;
-		table->min_rec_header_len = 0;
-		
-		for(j = 0; j < MAX_TABLE_FIELDS; j++) {
-			if (table->fields[j].type == FT_NONE) {
-				table->fields_count = j;
-				break;
-			}
-			table->data_min_size += table->fields[j].min_length;
-			table->data_max_size += table->fields[j].max_length;
-			
-			if (table->fields[j].can_be_null) {
-				table->n_nullable++;
-			} else {
-				int size = (table->fields[j].fixed_length ? table->fields[j].fixed_length : table->fields[j].max_length);
-				table->min_rec_header_len += (size > 255 ? 2 : 1);
-			}
-		}
-		
-		table->min_rec_header_len += (table->n_nullable + 7) / 8;
-		
-		if (debug) {
-			printf(" - total fields: %i\n", table->fields_count);
-			printf(" - nullable fields: %i\n", table->n_nullable);
-			printf(" - minimum header size: %i\n", table->min_rec_header_len);
-			printf("\n");
-		}
 	}
 }
 
@@ -385,7 +403,7 @@ void process_ibfile(int fn) {
 
 	// Read pages to the end of file
 	while ((read_bytes = read(fn, page, UNIV_PAGE_SIZE)) == UNIV_PAGE_SIZE) {
-		if (page_is_interesting(page)) process_ibpage(page);
+		process_ibpage(page);
 	}
 }
 
@@ -406,7 +424,7 @@ int open_ibfile(char *fname) {
 /*******************************************************************/
 void usage() {
 	error(
-	  "Usage: ./constraints_parser [-dDh] -f <innodb_datafile>\n"
+	  "Usage: ./constraints_parser -4|-5 [-dDV] -f <innodb_datafile>\n"
 	  "  Where\n"
 	  "    -h  -- Print this help\n"
 	  "    -d  -- Process only those pages which potentially could have deleted records (default = NO)\n"

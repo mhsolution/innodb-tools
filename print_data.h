@@ -5,7 +5,7 @@
 #include <page0page.h>
 #include <rem0rec.h>
 
-#include "common.h"
+#include "tables_dict.h"
 
 extern bool debug;
 

@@ -5,22 +5,22 @@ INCLUDES=-I mysql-source/include -I mysql-source/innobase/include
 
 all: constraints_parser page_parser
 
-print_data.o: print_data.h common.h
+print_data.o: print_data.h tables_dict.h
 	gcc $(CFLAGS) -g $(INCLUDES) -c print_data.c
 
-check_data.o: check_data.h common.h
+check_data.o: check_data.h tables_dict.h
 	gcc $(CFLAGS) -g $(INCLUDES) -c check_data.c
 
-common.o: common.h
-	gcc $(CFLAGS) -g $(INCLUDES) -c common.c
+tables_dict.o: tables_dict.h tables_dict.c table_defs.h mysql-source/include/my_config.h
+	gcc $(CFLAGS) -g $(INCLUDES) -c tables_dict.c
 
 # BINARIES
 
-page_parser: page_parser.c error.h common.h common.o libut.a
-	gcc $(CFLAGS) -g $(INCLUDES) -o page_parser page_parser.c common.o libut.a
+page_parser: page_parser.c error.h tables_dict.o libut.a
+	gcc $(CFLAGS) -g $(INCLUDES) -o page_parser page_parser.c tables_dict.o libut.a
 
-constraints_parser: constraints_parser.c error.h table_defs.h common.o print_data.o check_data.o libut.a
-	gcc $(CFLAGS) -g $(INCLUDES) -o constraints_parser constraints_parser.c common.o print_data.o check_data.o libut.a
+constraints_parser: constraints_parser.c error.h tables_dict.o print_data.o check_data.o libut.a
+	gcc $(CFLAGS) -g $(INCLUDES) -o constraints_parser constraints_parser.c tables_dict.o print_data.o check_data.o libut.a
 
 # DEPENDENCIES FROM MYSQL
 

@@ -6,15 +6,20 @@
 #include <fcntl.h>
 #include <time.h>
 
-#include "univ.i"
-#include "page0page.h"
-
 #include "error.h"
-#include "common.h"
+#include "tables_dict.h"
 
 static time_t timestamp = 0;
 
+// Global flags from getopt
+bool deleted_pages_only = 0;
+bool debug = 0;
+bool process_compact = 0;
+bool process_redundant = 0;
+
+/*******************************************************************/
 void process_ibpage(page_t *page) {
+    static ulint id = 0;
 	ulint page_id;
 	dulint index_id;
 	char tmp[256];
@@ -23,13 +28,16 @@ void process_ibpage(page_t *page) {
 	// Get page info
 	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
 	index_id = mach_read_from_8(page + PAGE_HEADER + PAGE_INDEX_ID);
-			
+	
+	// Skip empty pages
+    //if (index_id.high == 0 && index_id.low == 0) return;
+		
 	// Create table directory
 	sprintf(tmp, "pages-%u/%lu-%lu", timestamp, index_id.high, index_id.low);
 	mkdir(tmp, 0755);
 	
 	// Compose page file_name
-	sprintf(tmp, "pages-%u/%lu-%lu/%08lu.page", timestamp, index_id.high, index_id.low, page_id);
+	sprintf(tmp, "pages-%u/%lu-%lu/%lu-%08lu.page", timestamp, index_id.high, index_id.low, id++, page_id);
 	
 	printf("Read page #%lu.. saving it to %s\n", page_id, tmp);
 
@@ -40,6 +48,7 @@ void process_ibpage(page_t *page) {
 	close(fn);	
 }
 
+/*******************************************************************/
 void process_ibfile(int fn) {
 	int read_bytes;
 	page_t *page = malloc(UNIV_PAGE_SIZE);
@@ -56,10 +65,17 @@ void process_ibfile(int fn) {
 
 	// Read pages to the end of file
 	while ((read_bytes = read(fn, page, UNIV_PAGE_SIZE)) == UNIV_PAGE_SIZE) {
-		if (page_is_interesting(page)) process_ibpage(page);
+//	    if (deleted_pages_only) {
+//    		free_offset = page_header_get_field(page, PAGE_FREE);
+//    		if (page_header_get_field(page, PAGE_N_RECS) == 0 && free_offset == 0) continue;
+//    		if (free_offset > 0 && page_header_get_field(page, PAGE_GARBAGE) == 0) continue;
+//    		if (free_offset > UNIV_PAGE_SIZE) continue;
+//    	}
+		process_ibpage(page);
 	}
 }
 
+/*******************************************************************/
 int open_ibfile(char *fname) {
 	struct stat fstat;
 	int fn;
@@ -73,36 +89,43 @@ int open_ibfile(char *fname) {
 	return fn;
 }
 
+/*******************************************************************/
 void usage() {
 	error(
-	  "Usage: ./page_parser [-dDh] -f <innodb_datafile>\n"
+	  "Usage: ./page_parser -4|-5 [-dDh] -f <innodb_datafile>\n"
 	  "  Where\n"
 	  "    -h  -- Print this help\n"
 	  "    -d  -- Process only those pages which potentially could have deleted records (default = NO)\n"
-	  "    -D  -- Recover deleted rows only (default = NO)\n\n"
+	  "    -4  -- innodb_datafile is in REDUNDANT format\n"
+	  "    -5  -- innodb_datafile is in COMPACT format\n"
 	);
 }
 
-// Global flags from getopt
-bool deleted_pages_only = 0;
-bool deleted_records_only = 0;
-
+/*******************************************************************/
 int main(int argc, char **argv) {
 	int fn = 0, ch;
 
-	while ((ch = getopt(argc, argv, "hdDf:")) != -1) {
+	while ((ch = getopt(argc, argv, "45Vhdf:")) != -1) {
 		switch (ch) {
 			case 'd':
 				deleted_pages_only = 1;
 				break;
 
-			case 'D':
-			    deleted_records_only = 1;
-				break;
-
 			case 'f':
 				fn = open_ibfile(optarg);
 				break;
+
+			case 'V':
+				debug = 1;
+				break;
+
+            case '4':
+                process_redundant = 1;
+                break;
+
+            case '5':
+                process_compact = 1;
+                break;
 
 			default:
 			case '?':
@@ -115,6 +138,11 @@ int main(int argc, char **argv) {
 		process_ibfile(fn);
 		close(fn);
 	} else usage();
+
+	if (!process_compact && !process_redundant) {
+        printf("Error: Please, specify what format your datafile in. Use -4 for mysql 4.1 and below and -5 for 5.X+\n");
+        usage();
+	}
 	
 	process_ibfile(fn);
 	close(fn);
