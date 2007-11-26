@@ -4,27 +4,51 @@ use strict;
 use DBI;
 use Data::Dumper;
 use POSIX;
+use Getopt::Long;
 
-my $db_name = "triplejack2";
+#----------------------------------------------------------------
+# Parse command line
+
+# Defaults
+my $db_name = "test";
 my $db_host = "127.0.0.1";
-my $db_port = 13306;
-my $db_user = "scoundrel";
+my $db_port = 3306;
+my $db_user = "root";
 my $db_pass = "";
+my $help = 0;
+
+# Parse options
+my $res = GetOptions ("db=s"       => \$db_name,
+                      "host=s"     => \$db_host,
+                      "port=i"     => \$db_port,
+                      "user=s"     => \$db_user,
+                      "password=s" => \$db_pass,
+                      "help|?"     => \$help
+                     );
+
+Usage() if !$res || $help;
+
+#----------------------------------------------------------------
+# Connect to mysql
 
 my $dsn = "DBI:mysql:database=$db_name;host=$db_host;port=$db_port";
 my $dbh = DBI->connect($dsn, $db_user, $db_pass);
 
-die "Can't connect!" unless $dbh;
+Usage("Can't connect to mysql!") unless $dbh;
 
+#----------------------------------------------------------------
+# Dump tables definitions
 my $sth = $dbh->prepare("SHOW TABLES");
 $sth->execute;
 
 print("#ifndef table_defs_h\n#define table_defs_h\n\n");
 print("// Table definitions\ntable_def_t table_definitions[] = {\n");
 
-
 while (my $row = $sth->fetchrow_arrayref) {
 	my $table = $row->[0];
+
+	# Skip if it is not an innodb table
+	next unless(GetTableStorageEngine($table) =~ /innodb/i);
 
 	# Get fields list for table
 	my @fields = ();
@@ -189,6 +213,33 @@ sub IsFieldUnsigned($$) {
 	$sth->execute;
 	my $row = $sth->fetchrow_arrayref;
 	return ($row->[1] =~ /$field[^,]*unsigned/i);
+}
+
+#------------------------------------------------------------------
+sub GetTableStorageEngine($) {
+    my $table = shift;
+    my $sth = $dbh->prepare("SHOW TABLE STATUS LIKE '$table'");
+    $sth->execute;
+    my $row = $sth->fetchrow_hashref;
+    return $row->{Engine};
+}
+
+#------------------------------------------------------------------
+sub Usage {
+    my $msg = shift;
+    if ($msg) {
+        print "Error: $msg\n";
+    }
+
+    print "Usage: $0 [options]\n" .
+          "Where options are:\n" .
+          "\t--host     - mysql host\n" .
+          "\t--port     - mysql port\n" .
+          "\t--user     - mysql username\n" .
+          "\t--password - mysql password\n" .
+          "\t--db       - mysql database\n" .
+          "\t--help     - show this help\n\n";
+    exit(1);
 }
 
 #------------------------------------------------------------------
