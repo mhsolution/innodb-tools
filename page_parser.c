@@ -14,32 +14,11 @@
 
 static time_t timestamp = 0;
 
-void save_fields_info(char *fname, page_t *page) {
-	FILE *info;
-	rec_t *free_rec;
-	ulint fields_number, i;
-	
-	// Open file and get first free record
-	info = fopen(fname, "wt+");
-	free_rec = page + page_header_get_field(page, PAGE_FREE);
-
-	// Print fields number and print it
-	fields_number = rec_get_n_fields(free_rec);
-	fprintf(info, "%lu\n", fields_number);
-	
-	// Save fields lengths
-	for (i = 0; i < fields_number; i++) {
-		fprintf(info, "%lu\n", rec_get_nth_field_len(free_rec, i));
-	}
-	
-	fclose(info);
-}
-
 void process_ibpage(page_t *page) {
 	ulint page_id;
 	dulint index_id;
 	char tmp[256];
-	int fn, table_dir_res;
+	int fn;
 	
 	// Get page info
 	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
@@ -47,7 +26,7 @@ void process_ibpage(page_t *page) {
 			
 	// Create table directory
 	sprintf(tmp, "pages-%u/%lu-%lu", timestamp, index_id.high, index_id.low);
-	table_dir_res = mkdir(tmp, 0755);
+	mkdir(tmp, 0755);
 	
 	// Compose page file_name
 	sprintf(tmp, "pages-%u/%lu-%lu/%08lu.page", timestamp, index_id.high, index_id.low, page_id);
@@ -58,13 +37,7 @@ void process_ibpage(page_t *page) {
 	fn = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (!fn) error("Can't open file to save page!");
 	write(fn, page, UNIV_PAGE_SIZE);
-	close(fn);
-	
-	// Create fields info file (if directory did not exist yet)
-	if (table_dir_res != EEXIST && index_id.high == 0) {
-    	sprintf(tmp, "pages-%u/%lu-%lu/fields.info", timestamp, index_id.high, index_id.low);
-	    save_fields_info(tmp, page);	
-	}
+	close(fn);	
 }
 
 void process_ibfile(int fn) {
@@ -148,4 +121,3 @@ int main(int argc, char **argv) {
 	
 	return 0;
 }
-

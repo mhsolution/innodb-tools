@@ -15,11 +15,18 @@
 /* all charsets are available */
 /* #undef DEFINE_ALL_CHARACTER_SETS */
 
+/* Disables the use of --init-file, --skip-grant-tables and --bootstrap
+   options */
+/* #undef DISABLE_GRANT_OPTIONS */
+
 /* Version of .frm files */
 #define DOT_FRM_VERSION 6
 
 /* If LOAD DATA LOCAL INFILE should be enabled by default */
 /* #undef ENABLED_LOCAL_INFILE */
+
+/* If SHOW PROFILE should be enabled */
+#define ENABLED_PROFILING 1
 
 /* Do we have FIONREAD */
 #define FIONREAD_IN_SYS_IOCTL 1
@@ -115,6 +122,9 @@
 /* Define to enable charset dec8 */
 /* #undef HAVE_CHARSET_dec8 */
 
+/* Define to enable charset eucjpms */
+/* #undef HAVE_CHARSET_eucjpms */
+
 /* Define to enable charset euckr */
 /* #undef HAVE_CHARSET_euckr */
 
@@ -209,6 +219,14 @@
    don't. */
 #define HAVE_DECL_MADVISE 1
 
+/* Define to 1 if you have the declaration of `SHM_HUGETLB', and to 0 if you
+   don't. */
+/* #undef HAVE_DECL_SHM_HUGETLB */
+
+/* Define to 1 if you have the declaration of `tgoto', and to 0 if you don't.
+   */
+#define HAVE_DECL_TGOTO 1
+
 /* Whether we are using DEC threads */
 /* #undef HAVE_DEC_THREADS */
 
@@ -233,6 +251,9 @@
 /* Builds Example DB */
 /* #undef HAVE_EXAMPLE_DB */
 
+/* Defined by configure. Use explicit template instantiation. */
+#define HAVE_EXPLICIT_TEMPLATE_INSTANTIATION 1
+
 /* Define to 1 if you have the `fchmod' function. */
 #define HAVE_FCHMOD 1
 
@@ -247,6 +268,9 @@
 
 /* Define to 1 if you have the `fdatasync' function. */
 /* #undef HAVE_FDATASYNC */
+
+/* Define to enable Federated Handler */
+/* #undef HAVE_FEDERATED_DB */
 
 /* Define to 1 if you have the `fgetln' function. */
 #define HAVE_FGETLN 1
@@ -354,9 +378,6 @@
 /* system headers define in_addr_t */
 #define HAVE_IN_ADDR_T 1
 
-/* Using old ISAM tables */
-/* #undef HAVE_ISAM */
-
 /* isinf() macro or function */
 #define HAVE_ISINF 1
 
@@ -365,6 +386,15 @@
 
 /* Define to 1 if you have the `issetugid' function. */
 #define HAVE_ISSETUGID 1
+
+/* Define if mysql_cv_langinfo_codeset=yes */
+#define HAVE_LANGINFO_CODESET 
+
+/* Define to 1 if you have the <langinfo.h> header file. */
+#define HAVE_LANGINFO_H 1
+
+/* Define if you have large pages support */
+/* #undef HAVE_LARGE_PAGES */
 
 /* Define to 1 if you have the `bind' library (-lbind). */
 /* #undef HAVE_LIBBIND */
@@ -438,6 +468,18 @@
 /* Define to 1 if you have the <malloc.h> header file. */
 /* #undef HAVE_MALLOC_H */
 
+/* Define if you have mbrlen */
+#define HAVE_MBRLEN 
+
+/* Define if you have mbrtowc */
+#define HAVE_MBRTOWC 
+
+/* Define if you have mbsrtowcs */
+#define HAVE_MBSRTOWCS 
+
+/* Define if mysql_cv_have_mbstate_t=yes */
+#define HAVE_MBSTATE_T 
+
 /* Define to 1 if you have the `memcpy' function. */
 #define HAVE_MEMCPY 1
 
@@ -453,7 +495,7 @@
 /* Define to 1 if you have the `mlockall' function. */
 #define HAVE_MLOCKALL 1
 
-/* Define to 1 if you have a working `mmap' system call. */
+/* Define to 1 if you have the `mmap' function. */
 #define HAVE_MMAP 1
 
 /* Using Ndb Cluster DB */
@@ -480,11 +522,8 @@
 /* Define to 1 if the system has the type `off_t'. */
 #define HAVE_OFF_T 1
 
-/* OpenSSL */
+/* Defined by configure. Using yaSSL for OpenSSL emulation. */
 /* #undef HAVE_OPENSSL */
-
-/* ORBIT */
-#define HAVE_ORBIT 1
 
 /* Define to 1 if you have the <paths.h> header file. */
 #define HAVE_PATHS_H 1
@@ -710,6 +749,9 @@
 /* Define to 1 if you have the `strpbrk' function. */
 #define HAVE_STRPBRK 1
 
+/* Define to 1 if you have the `strsignal' function. */
+#define HAVE_STRSIGNAL 1
+
 /* Define to 1 if you have the `strstr' function. */
 #define HAVE_STRSTR 1
 
@@ -750,6 +792,9 @@
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
 #define HAVE_SYS_IOCTL_H 1
 
+/* Define to 1 if you have the <sys/ipc.h> header file. */
+#define HAVE_SYS_IPC_H 1
+
 /* Define to 1 if you have the <sys/malloc.h> header file. */
 #define HAVE_SYS_MALLOC_H 1
 
@@ -762,6 +807,9 @@
 /* Define to 1 if you have the <sys/param.h> header file. */
 #define HAVE_SYS_PARAM_H 1
 
+/* Define to 1 if you have the <sys/prctl.h> header file. */
+/* #undef HAVE_SYS_PRCTL_H */
+
 /* Define to 1 if you have the <sys/ptem.h> header file. */
 /* #undef HAVE_SYS_PTEM_H */
 
@@ -773,6 +821,9 @@
 
 /* Define to 1 if you have the <sys/select.h> header file. */
 #define HAVE_SYS_SELECT_H 1
+
+/* Define to 1 if you have the <sys/shm.h> header file. */
+#define HAVE_SYS_SHM_H 1
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #define HAVE_SYS_SOCKET_H 1
@@ -873,8 +924,10 @@
 /* Define to 1 if you have the `vidattr' function. */
 /* #undef HAVE_VIDATTR */
 
-/* Virtual IO */
-/* #undef HAVE_VIO */
+/* Define to enable buffered read. This works only if syscalls read/recv
+   return as soon as there is some data in the kernel buffer, no matter how
+   big the given buffer is. */
+#define HAVE_VIO_READ_BUFF 1
 
 /* Found vis.h and the strvis() function */
 #define HAVE_VIS_H 1
@@ -882,14 +935,35 @@
 /* Define to 1 if you have the `vprintf' function. */
 #define HAVE_VPRINTF 1
 
-/* Do we use user level threads */
-/* #undef HAVE_mit_thread */
+/* Define to 1 if you have the <wchar.h> header file. */
+#define HAVE_WCHAR_H 1
+
+/* Define if you check wcsdup */
+/* #undef HAVE_WCSDUP */
+
+/* Define if you have wctomb */
+#define HAVE_WCTOMB 
+
+/* Define to 1 if you have the <wctype.h> header file. */
+#define HAVE_WCTYPE_H 1
+
+/* Define if you have wcwidth */
+#define HAVE_WCWIDTH 
+
+/* Defined by configure. Using yaSSL for OpenSSL emulation. */
+/* #undef HAVE_YASSL */
+
+/* Define if /proc/meminfo shows the huge page size (Linux only) */
+/* #undef HUGETLB_USE_PROC_MEMINFO */
 
 /* Define if you have -lwrap */
 /* #undef LIBWRAP */
 
-/* Machine type name, eg sun10 */
+/* Machine type name, eg sparc */
 #define MACHINE_TYPE "i686"
+
+/* Maximum number of indexes per table */
+#define MAX_INDEXES 64
 
 /* Define the default charset name */
 #define MYSQL_DEFAULT_CHARSET_NAME "latin1"
@@ -904,13 +978,13 @@
 /* #undef NDB_SHM_TRANSPORTER */
 
 /* NDB build version */
-#define NDB_VERSION_BUILD 22
+#define NDB_VERSION_BUILD 45
 
 /* NDB major version */
-#define NDB_VERSION_MAJOR 4
+#define NDB_VERSION_MAJOR 5
 
 /* NDB minor version */
-#define NDB_VERSION_MINOR 1
+#define NDB_VERSION_MINOR 0
 
 /* NDB status version */
 #define NDB_VERSION_STATUS ""
@@ -963,6 +1037,9 @@
 /* */
 #define SIZEOF_OFF_T 8
 
+/* The size of a `short', as computed by sizeof. */
+#define SIZEOF_SHORT 2
+
 /* The base type of the last arg to accept */
 #define SOCKET_SIZE_TYPE socklen_t
 
@@ -1001,8 +1078,8 @@
 /* The struct rlimit type to use with setrlimit */
 #define STRUCT_RLIMIT struct rlimit
 
-/* Name of system, eg solaris */
-#define SYSTEM_TYPE "apple-darwin8.8.1"
+/* Name of system, eg sun-solaris */
+#define SYSTEM_TYPE "apple-darwin9.1.0"
 
 /* Whether we build for Linux */
 /* #undef TARGET_OS_LINUX */
@@ -1013,6 +1090,9 @@
 
 /* Should be client be thread safe */
 /* #undef THREAD_SAFE_CLIENT */
+
+/* Define to 1 if time_t is unsigned */
+/* #undef TIME_T_UNSIGNED */
 
 /* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
 #define TIME_WITH_SYS_TIME 1
@@ -1033,6 +1113,9 @@
 /* */
 #define USE_MB_IDENT 1
 
+/* Needs to use mysys_new helpers */
+/* #undef USE_MYSYS_NEW */
+
 /* used new readline interface (are rl_completion_func_t and
    rl_compentry_func_t defined) */
 /* #undef USE_NEW_READLINE_INTERFACE */
@@ -1040,11 +1123,8 @@
 /* the pstack backtrace library */
 /* #undef USE_PSTACK */
 
-/* Use MySQL RAID */
-/* #undef USE_RAID */
-
 /* Version number of package */
-#define VERSION "4.1.22"
+#define VERSION "5.0.45"
 
 /* sighandler type is void (*signal ()) (); */
 #define VOID_SIGHANDLER 1
