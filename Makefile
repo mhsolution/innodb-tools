@@ -5,11 +5,22 @@ INCLUDES=-I mysql-source/include -I mysql-source/innobase/include
 
 all: constraints_parser page_parser
 
-page_parser: page_parser.c error.h common.h common.c libut.a
-	gcc $(CFLAGS) -g $(INCLUDES) -o page_parser page_parser.c common.c libut.a
+print_data.o: print_data.h common.h
+	gcc $(CFLAGS) -g $(INCLUDES) -c print_data.c
 
-constraints_parser: constraints_parser.c error.h common.h table_defs.h common.c libut.a
-	gcc $(CFLAGS) -g $(INCLUDES) -o constraints_parser constraints_parser.c common.c libut.a
+check_data.o: check_data.h common.h
+	gcc $(CFLAGS) -g $(INCLUDES) -c check_data.c
+
+common.o: common.h
+	gcc $(CFLAGS) -g $(INCLUDES) -c common.c
+
+# BINARIES
+
+page_parser: page_parser.c error.h common.h common.o libut.a
+	gcc $(CFLAGS) -g $(INCLUDES) -o page_parser page_parser.c common.o libut.a
+
+constraints_parser: constraints_parser.c error.h table_defs.h common.o print_data.o check_data.o libut.a
+	gcc $(CFLAGS) -g $(INCLUDES) -o constraints_parser constraints_parser.c common.o print_data.o check_data.o libut.a
 
 # DEPENDENCIES FROM MYSQL
 
@@ -30,7 +41,7 @@ dist:
 	rm -rf innodb_recovery
     
 clean: 
-	rm -f page_parser constraints_parser
+	rm -f page_parser constraints_parser *.o
 	rm -rf constraints_parser.dSYM page_parser.dSYM
 
 distclean: clean
