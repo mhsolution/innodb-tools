@@ -95,10 +95,19 @@ int open_ibfile(char *fname) {
 	struct stat fstat;
 	int fn;
 
-	// Disallow Skip non-regular files
+	// Skip non-regular files
 	printf("Opening file: %s\n", fname);
-	if (stat(fname, &fstat) != 0 || (fstat.st_mode & S_IFREG) != S_IFREG) error("Invalid file specified!");
-	fn = open(fname, O_RDONLY, 0);
+    
+    if (stat(fname, &fstat) != 0) {
+        printf("Errno = %d, Error = %s\n", errno, strerror(errno));
+        error("Can't stat data file! Looks like this file is too large and requires 64-bit stat(). Check your Makefile."); 
+    }
+
+    if ((fstat.st_mode & S_IFREG) != S_IFREG) {
+        error("Invalid file specified (non-regular file)!");
+    }
+
+    fn = open(fname, O_RDONLY, 0);
 	if (!fn) error("Can't open file!");
 	
 	return fn;
