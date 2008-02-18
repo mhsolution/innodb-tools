@@ -312,7 +312,7 @@ sub ParseFieldType($) {
 
 	if ($type =~ /^DECIMAL\((\d+),\s*(\d+)\)/i) {
 		my $len_bytes = ceil(($1-$2) * 4 / 9) + ceil($2*4/9);
-		return { type => 'FT_CHAR', min_len => 0, max_len => $len_bytes };
+		return { type => 'FT_CHAR', fixed_len => $len_bytes };
 	}
 
 	die "Unsupported type: $type!\n";
