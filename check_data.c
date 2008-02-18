@@ -1,5 +1,12 @@
 #include <check_data.h>
 
+// Linux has no isnumber function? (Debian 4.0 has no such function)
+#ifndef isnumber
+inline int isnumber(char c) {
+    return (isdigit(c) || c == '.' || c == '-');
+}
+#endif
+
 /*******************************************************************/
 inline ulonglong make_ulonglong(dulint x) {
 	ulonglong lx = x.high;
