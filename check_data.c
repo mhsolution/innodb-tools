@@ -1,38 +1,59 @@
 #include <check_data.h>
 
 /*******************************************************************/
+inline ulonglong make_ulonglong(dulint x) {
+	ulonglong lx = x.high;
+	lx <<= 32;
+	lx += x.low;
+	return lx;
+}
+
+/*******************************************************************/
+inline longlong make_longlong(dulint x) {
+	longlong lx = x.high;
+	lx <<= 32;
+	lx += x.low;
+	return lx;
+}
+
+/*******************************************************************/
 ibool check_datetime(ulonglong ldate) {
 	int year, month, day, hour, min, sec;
 	
 	ldate &= ~(1ULL << 63);
-	if (debug) printf("DATETIME=%llu ", ldate);
 
 	if (ldate == 0) return TRUE;
 	if (debug) printf("DATE=OK ");
 
 	sec = ldate % 100; ldate /= 100;
+    if (debug) printf("SEC(%d)", sec);
 	if (sec < 0 || sec > 59) return FALSE;
-	if (debug) printf("SEC=OK ");
+	if (debug) printf("=OK ");
 	
 	min = ldate % 100; ldate /= 100;
+    if (debug) printf("MIN(%d)", min);
 	if (min < 0 || min > 59) return FALSE;
-	if (debug) printf("MIN=OK ");
+	if (debug) printf("=OK ");
 	
 	hour = ldate % 100; ldate /= 100;
+    if (debug) printf("HOUR(%d)", hour);
 	if (hour < 0 || hour > 23) return FALSE;
-	if (debug) printf("HOUR=OK ");
+	if (debug) printf("=OK ");
 
 	day = ldate % 100; ldate /= 100;
+    if (debug) printf("DAY(%d)", day);
 	if (day < 0 || day > 31) return FALSE;
-	if (debug) printf("DAY=OK ");
+	if (debug) printf("=OK ");
 
 	month = ldate % 100; ldate /= 100;
+    if (debug) printf("MONTH(%d)", month);
 	if (month < 0 || month > 12) return FALSE;
-	if (debug) printf("MONTH=OK ");
+	if (debug) printf("=OK ");
 
 	year = ldate % 10000;
+    if (debug) printf("YEAR(%d)", year);
 	if (year < 1950 || year > 2050) return FALSE;
-	if (debug) printf("YEAR=OK ");
+	if (debug) printf("=OK ");
 
 	return TRUE;
 }
@@ -61,7 +82,6 @@ ibool check_char_digits(char *value, ulint len) {
 ibool check_field_limits(field_def_t *field, byte *value, ulint len) {
 	long long int int_value;
 	unsigned long long int uint_value;
-	ulonglong date_value;
 	
 	switch (field->type) {
 		case FT_INT:
@@ -100,8 +120,7 @@ ibool check_field_limits(field_def_t *field, byte *value, ulint len) {
 
 		case FT_DATE:
 		case FT_DATETIME:
-			date_value = make_longlong(mach_read_from_8(value));
-			if (!check_datetime(date_value)) return FALSE;
+			if (!check_datetime(make_longlong(mach_read_from_8(value)))) return FALSE;
 			break;
 		
 		case FT_ENUM:

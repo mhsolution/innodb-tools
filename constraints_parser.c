@@ -41,7 +41,7 @@ ulint process_ibrec(page_t *page, rec_t *rec, table_def_t *table, ulint *offsets
 		
 		if (table->fields[i].type == FT_INTERNAL) continue;
 		
-		if (debug) printf("Field #%i: length %lu, value: ", i, len);
+		if (debug) printf("Field #%i @ %p: length %lu, value: ", i, field, len);
 
 		if (len == UNIV_SQL_NULL) {
 			printf("NULL");
@@ -62,7 +62,7 @@ static ibool check_constraints(rec_t *rec, table_def_t* table, ulint* offsets) {
 	int i;
 	
 	if (debug) {
-		printf("\nChecking constraints for a row (%s):", table->name);
+		printf("\nChecking constraints for a row (%s) at %p:", table->name, rec);
 		ut_print_buf(stdout, rec, 100);
 	}
 	
@@ -71,7 +71,7 @@ static ibool check_constraints(rec_t *rec, table_def_t* table, ulint* offsets) {
 		// Get field value pointer and field length
 		ulint len;
 		byte *field = rec_get_nth_field(rec, offsets, i, &len);
-		if (debug) printf("\n - field %s(%lu):", table->fields[i].name, len);
+		if (debug) printf("\n - field %s(addr = %p, len = %lu):", table->fields[i].name, field, len);
 
 		// Skip null fields from type checks and fail if null is not allowed by data limits
 		if (len == UNIV_SQL_NULL) {
@@ -85,7 +85,7 @@ static ibool check_constraints(rec_t *rec, table_def_t* table, ulint* offsets) {
 		// Check limits
 		if (!table->fields[i].has_limits) continue;
 		if (!check_field_limits(&(table->fields[i]), field, len)) {
-			if (debug) printf("LIMITS check failed!\n");
+			if (debug) printf("LIMITS check failed(field = %p, len = %d)!\n", field, len);
 			return FALSE;
 		}
 	}
@@ -114,11 +114,11 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 		if (debug) printf("\n - field %s(%lu):", table->fields[i].name, len);
 		
 		// If field is null
-		if (len == UNIV_SQL_NULL) {
+		if (len == UNIV_SQL_NULL || len == 0) {
 			// Check if it can be null and jump to a next field if it is OK
 			if (table->fields[i].can_be_null) continue;
 			// Invalid record where non-nullable field is NULL
-			if (debug) printf("Can't be NULL!\n");
+			if (debug) printf("Can't be NULL or zero-length!\n");
 			return FALSE;
 		} 
 		
@@ -127,7 +127,7 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 			// Check if size is the same and jump to the next field if it is OK
 			if (len == table->fields[i].fixed_length) continue;
 			// Invalid fixed length field
-			if (debug) printf("Invalid fixed length field!\n");
+			if (debug) printf("Invalid fixed length field size: %u, but should be %u!\n", len, table->fields[i].fixed_length);
 			return FALSE;
 		}
 		
@@ -141,7 +141,7 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 		
 		// Check size limits for varlen fields
 		if (len < table->fields[i].min_length || len > table->fields[i].max_length) {
-			if (debug) printf("Length limits check failed!\n");
+			if (debug) printf("Length limits check failed (%u < %u || %u > %u)!\n", len, table->fields[i].min_length, len, table->fields[i].max_length);
 			return FALSE;
 		}
 
@@ -305,14 +305,14 @@ ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *of
 	if (offset < record_extra_bytes + table->min_rec_header_len) return FALSE;
 	if (debug) printf("ORIGIN=OK ");
 
+	// Skip non-deleted records
+	if (deleted_records_only && !rec_get_deleted_flag(rec, page_is_comp(page))) return FALSE;
+	if (debug) printf("DELETED=OK ");
+
 	// Get field offsets for current table
 	if (process_compact && !ibrec_init_offsets_new(page, rec, table, offsets)) return FALSE;
 	if (process_redundant && !ibrec_init_offsets_old(page, rec, table, offsets)) return FALSE;
 	if (debug) printf("OFFSETS=OK ");
-
-	// Skip non-deleted records
-	if (deleted_records_only && !rec_get_deleted_flag(rec, page_is_comp(page))) return FALSE;
-	if (debug) printf("DELETED=OK ");
 
 	// Check the record's data size
 	data_size = rec_offs_data_size(offsets);
@@ -393,7 +393,10 @@ void process_ibfile(int fn) {
 	int read_bytes;
 	page_t *page = malloc(UNIV_PAGE_SIZE);
 	char tmp[20];
-	
+    struct stat st;
+    off_t pos;
+    ulint free_offset;
+    	
 	if (!page) error("Can't allocate page buffer!");
 
 	// Initialize table definitions (count nullable fields, data sizes, etc)
@@ -401,9 +404,25 @@ void process_ibfile(int fn) {
 
 	if (debug) printf("Read data from fn=%d...\n", fn);
 
+    // Get file info
+    fstat(fn, &st);
+
 	// Read pages to the end of file
 	while ((read_bytes = read(fn, page, UNIV_PAGE_SIZE)) == UNIV_PAGE_SIZE) {
-		process_ibpage(page);
+        pos = lseek(fn, 0, SEEK_CUR);
+        
+        if (pos % (UNIV_PAGE_SIZE * 10) == 0) {
+            fprintf(stderr, "%.2f%% done\n", 100.0 * pos / st.st_size);
+        }
+
+	    if (deleted_pages_only) {
+    		free_offset = page_header_get_field(page, PAGE_FREE);
+    		if (page_header_get_field(page, PAGE_N_RECS) == 0 && free_offset == 0) continue;
+    		if (free_offset > 0 && page_header_get_field(page, PAGE_GARBAGE) == 0) continue;
+    		if (free_offset > UNIV_PAGE_SIZE) continue;
+    	}
+        
+        process_ibpage(page);
 	}
 }
 

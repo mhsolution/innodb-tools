@@ -1,27 +1,11 @@
 #include <print_data.h>
 
 /*******************************************************************/
-inline ulonglong make_ulonglong(dulint x) {
-	ulonglong lx = x.high;
-	lx <<= 32;
-	lx += x.low;
-	return lx;
-}
-
-/*******************************************************************/
-inline longlong make_longlong(dulint x) {
-	longlong lx = x.high;
-	lx <<= 32;
-	lx += x.low;
-	return lx;
-}
-
-/*******************************************************************/
 void print_datetime(ulonglong ldate) {
 	int year, month, day, hour, min, sec;
 	
 	ldate &= ~(1ULL << 63);
-	
+    
 	sec = ldate % 100; ldate /= 100;
 	min = ldate % 100; ldate /= 100;
 	hour = ldate % 100; ldate /= 100;
@@ -138,6 +122,10 @@ void print_field_value(byte *value, ulint len, field_def_t *field) {
 		case FT_ENUM:
 			print_enum(mach_read_from_1(value), field);
 			break;
+
+        case FT_DECIMAL:
+            printf("DECIMAL");
+            break;
 
 		default:
     		printf("undef(%d)", field->type);
