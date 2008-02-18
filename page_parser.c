@@ -17,6 +17,9 @@ bool debug = 0;
 bool process_compact = 0;
 bool process_redundant = 0;
 
+dulint filter_id;
+bool use_filter_id = 0;
+
 /*******************************************************************/
 void process_ibpage(page_t *page) {
     static ulint id = 0;
@@ -31,6 +34,9 @@ void process_ibpage(page_t *page) {
 	
 	// Skip empty pages
     //if (index_id.high == 0 && index_id.low == 0) return;
+	
+	// Skip tables if filter used
+    if (use_filter_id && (index_id.low != filter_id.low || index_id.high != filter_id.high)) return;
 		
 	// Create table directory
 	sprintf(tmp, "pages-%u/%lu-%lu", timestamp, index_id.high, index_id.low);
@@ -53,8 +59,13 @@ void process_ibfile(int fn) {
 	int read_bytes;
 	page_t *page = malloc(UNIV_PAGE_SIZE);
 	char tmp[20];
+    struct stat st;
+    off_t pos;
 	
 	if (!page) error("Can't allocate page buffer!");
+
+    // Get file info
+    fstat(fn, &st);
 
 	// Create pages directory
 	timestamp = time(0);
@@ -65,6 +76,10 @@ void process_ibfile(int fn) {
 
 	// Read pages to the end of file
 	while ((read_bytes = read(fn, page, UNIV_PAGE_SIZE)) == UNIV_PAGE_SIZE) {
+        pos = lseek(fn, 0, SEEK_CUR);
+        if (pos % (UNIV_PAGE_SIZE * 1000) == 0) {
+            printf("%.2f%% done\n", 100.0 * pos / st.st_size);
+        }
 //	    if (deleted_pages_only) {
 //    		free_offset = page_header_get_field(page, PAGE_FREE);
 //    		if (page_header_get_field(page, PAGE_N_RECS) == 0 && free_offset == 0) continue;
@@ -90,14 +105,24 @@ int open_ibfile(char *fname) {
 }
 
 /*******************************************************************/
+void set_filter_id(char *id) {
+    int cnt = sscanf(id, "%lu:%lu", &filter_id.high, &filter_id.low);
+    if (cnt < 2) {
+        error("Invalid index id provided! It should be in N:M format, where N and M are unsigned integers");
+    }
+    use_filter_id = 1;
+}
+
+/*******************************************************************/
 void usage() {
 	error(
-	  "Usage: ./page_parser -4|-5 [-dDh] -f <innodb_datafile>\n"
+	  "Usage: ./page_parser -4|-5 [-dDh] -f <innodb_datafile> [-T N:M]\n"
 	  "  Where\n"
 	  "    -h  -- Print this help\n"
 	  "    -d  -- Process only those pages which potentially could have deleted records (default = NO)\n"
 	  "    -4  -- innodb_datafile is in REDUNDANT format\n"
 	  "    -5  -- innodb_datafile is in COMPACT format\n"
+	  "    -T  -- retrieves only pages with index id = NM (N - high word, M - low word of id)\n"
 	);
 }
 
@@ -105,7 +130,7 @@ void usage() {
 int main(int argc, char **argv) {
 	int fn = 0, ch;
 
-	while ((ch = getopt(argc, argv, "45Vhdf:")) != -1) {
+	while ((ch = getopt(argc, argv, "45Vhdf:T:")) != -1) {
 		switch (ch) {
 			case 'd':
 				deleted_pages_only = 1;
@@ -125,6 +150,10 @@ int main(int argc, char **argv) {
 
             case '5':
                 process_compact = 1;
+                break;
+
+            case 'T':
+                set_filter_id(optarg);
                 break;
 
 			default:
