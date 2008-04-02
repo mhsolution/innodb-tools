@@ -114,7 +114,7 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 		if (debug) printf("\n - field %s(%lu):", table->fields[i].name, len);
 		
 		// If field is null
-		if (len == UNIV_SQL_NULL || len == 0) {
+		if (len == UNIV_SQL_NULL) {
 			// Check if it can be null and jump to a next field if it is OK
 			if (table->fields[i].can_be_null) continue;
 			// Invalid record where non-nullable field is NULL
@@ -316,7 +316,14 @@ ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *of
 
 	// Check the record's data size
 	data_size = rec_offs_data_size(offsets);
-	if (data_size > table->data_max_size || data_size < table->data_min_size) return FALSE;
+	if (data_size > table->data_max_size) {
+        if (debug) printf("DATA_SIZE=FAIL(%lu > %lu) ", data_size, table->data_max_size);
+        return FALSE;
+	}
+	if (data_size < table->data_min_size) {
+        if (debug) printf("DATA_SIZE=FAIL(%lu < %lu) ", data_size, table->data_min_size);
+        return FALSE;
+	}
 	if (debug) printf("DATA_SIZE=OK ");
 
 	// Check fields sizes

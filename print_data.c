@@ -17,20 +17,31 @@ void print_datetime(ulonglong ldate) {
 }
 
 /*******************************************************************/
-void print_date(ulonglong ldate) {
+void print_date(ulong ldate) {
 	int year, month, day;
 
-	ldate &= ~(1ULL << 63);
+	ldate &= ~(1UL << 23);
 	
-	ldate /= 100;
-	ldate /= 100;
-	ldate /= 100;
-	day = ldate % 100; ldate /= 100;
-	month = ldate % 100; ldate /= 100;
-	year = ldate % 10000;
+	day = ldate % 32; ldate /= 32;
+	month = ldate % 16; ldate /= 16;
+	year = ldate;
 	
 	printf("\"%04u-%02u-%02u\"", year, month, day);
 }
+
+/*******************************************************************/
+void print_time(ulong ltime) {
+	int hour, min, sec;
+
+	ltime &= ~(1UL << 23);
+	
+	sec = ltime % 60; ltime /= 60;
+	min = ltime % 60; ltime /= 60;
+	hour = ltime % 24;
+	
+	printf("\"%02u:%02u:%02u\"", hour, min, sec);
+}
+
 
 /*******************************************************************/
 void print_enum(int value, field_def_t *field) {
@@ -116,7 +127,11 @@ void print_field_value(byte *value, ulint len, field_def_t *field) {
 			break;
 
 		case FT_DATE:
-			print_date(make_longlong(mach_read_from_8(value)));
+			print_date(mach_read_from_3(value));
+			break;
+
+		case FT_TIME:
+			print_time(mach_read_from_3(value));
 			break;
 
 		case FT_ENUM:

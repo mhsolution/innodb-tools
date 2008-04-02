@@ -15,6 +15,7 @@ my $db_host = "127.0.0.1";
 my $db_port = 3306;
 my $db_user = "root";
 my $db_pass = "";
+my $db_table = "";
 my $help = 0;
 
 # Parse options
@@ -23,6 +24,7 @@ my $res = GetOptions ("db=s"       => \$db_name,
                       "port=i"     => \$db_port,
                       "user=s"     => \$db_user,
                       "password=s" => \$db_pass,
+                      "table=s"    => \$db_table,
                       "help|?"     => \$help
                      );
 
@@ -46,6 +48,9 @@ print("// Table definitions\ntable_def_t table_definitions[] = {\n");
 
 while (my $row = $sth->fetchrow_arrayref) {
 	my $table = $row->[0];
+
+    # Skip if not a requested specific table
+    next if ($db_table ne '' && $table ne $db_table);
 
 	# Skip if it is not an innodb table
 	next unless(GetTableStorageEngine($table) =~ /innodb/i);
@@ -128,6 +133,30 @@ sub FindFieldByName($$) {
 }
 
 #------------------------------------------------------------------
+sub GetUIntLimits($) {
+    my $len = shift;
+    
+    return (0, 255) if ($len == 1);
+    return (0, 65535) if ($len == 2);
+    return (0, "16777215UL") if ($len == 3);
+    return (0, "4294967295ULL") if ($len == 4);
+    return (0, "18446744073709551615ULL") if ($len == 8);
+    return (0, 30000);
+}
+
+#------------------------------------------------------------------
+sub GetIntLimits($) {
+    my $len = shift;
+    
+    return (-128, 127) if ($len == 1);
+    return (-32768, 32767) if ($len == 2);
+    return ("-8388608L", "8388607L") if ($len == 3);
+    return ("-2147483648LL", "2147483647LL") if ($len == 4);
+    return ("-9223372036854775808LL", "9223372036854775807LL") if ($len == 8);
+    return (0, 30000);
+}
+
+#------------------------------------------------------------------
 sub DumpFieldLow {
 	my %info = @_;
 	
@@ -147,31 +176,37 @@ sub DumpFieldLow {
 	if ($info{ParsedType} eq 'FT_TEXT' || $info{ParsedType} eq 'FT_CHAR') {
 		printf("\t\t\t\thas_limits: TRUE,\n");
 		printf("\t\t\t\tlimits: {\n");
+    	printf("\t\t\t\t\tcan_be_null: %s,\n", $info{Null} ? 'TRUE' : 'FALSE');
 		printf("\t\t\t\t\tchar_min_len: 0,\n");
-		printf("\t\t\t\t\tchar_max_len: %d,\n", $info{MaxLen});
+		printf("\t\t\t\t\tchar_max_len: %d,\n", $info{MaxLen} + $info{FixedLen});
 		printf("\t\t\t\t\tchar_ascii_only: TRUE\n");
 		printf("\t\t\t\t},\n\n");
 	}
 
 	if ($info{ParsedType} eq 'FT_INT' && $info{Name} =~ /id$/i) {
+        my ($min, $max) = GetIntLimits($info{FixedLen});
 		printf("\t\t\t\thas_limits: TRUE,\n");
 		printf("\t\t\t\tlimits: {\n");
-		printf("\t\t\t\t\tint_min_val: -30000,\n");
-		printf("\t\t\t\t\tint_max_val: 30000\n");
+    	printf("\t\t\t\t\tcan_be_null: %s,\n", $info{Null} ? 'TRUE' : 'FALSE');
+		printf("\t\t\t\t\tint_min_val: %s,\n", $min);
+		printf("\t\t\t\t\tint_max_val: %s\n", $max);
 		printf("\t\t\t\t},\n\n");
 	} 
 
 	if ($info{ParsedType} eq 'FT_UINT' && $info{Name} =~ /id$/i) {
+        my ($min, $max) = GetUIntLimits($info{FixedLen});
 		printf("\t\t\t\thas_limits: TRUE,\n");
 		printf("\t\t\t\tlimits: {\n");
-		printf("\t\t\t\t\tuint_min_val: 0,\n");
-		printf("\t\t\t\t\tuint_max_val: 30000\n");
+    	printf("\t\t\t\t\tcan_be_null: %s,\n", $info{Null} ? 'TRUE' : 'FALSE');
+		printf("\t\t\t\t\tuint_min_val: %s,\n", $min);
+		printf("\t\t\t\t\tuint_max_val: %s\n", $max);
 		printf("\t\t\t\t},\n\n");
 	} 
 
 	if ($info{ParsedType} eq 'FT_ENUM') {
 		printf("\t\t\t\thas_limits: TRUE,\n");
 		printf("\t\t\t\tlimits: {\n");
+    	printf("\t\t\t\t\tcan_be_null: %s,\n", $info{Null} ? 'TRUE' : 'FALSE');
 		printf("\t\t\t\t\tenum_values_count: %d,\n", scalar(@{$info{Values}}));
 		printf("\t\t\t\t\tenum_values: { \"%s\" }\n", join('", "', @{$info{Values}}));
 		printf("\t\t\t\t},\n\n");
@@ -237,6 +272,7 @@ sub Usage {
           "\t--user     - mysql username\n" .
           "\t--password - mysql password\n" .
           "\t--db       - mysql database\n" .
+          "\t--table    - specific table only\n" .
           "\t--help     - show this help\n\n";
     exit(1);
 }
@@ -254,7 +290,15 @@ sub ParseFieldType($) {
 	}
 
 	if ($type =~ /DATE/i) {
-		return { type => 'FT_DATE', fixed_len => 8 };
+		return { type => 'FT_DATE', fixed_len => 3 };
+	}
+
+	if ($type =~ /TIME/i) {
+		return { type => 'FT_DATE', fixed_len => 3 };
+	}
+
+	if ($type =~ /YEAR/i) {
+		return { type => 'FT_UINT', fixed_len => 1 };
 	}
 
 	if ($type =~ /^TINYINT/i) {
@@ -277,8 +321,12 @@ sub ParseFieldType($) {
 		return { type => 'FT_INT', fixed_len => 8 };
 	}
 
-	if ($type =~ /(.*)CHAR\((\d+)\)/i) {
-		return { type => 'FT_CHAR', min_len => ($1 ne '' ? 0 : $2), max_len => $2 };
+	if ($type =~ /^CHAR\((\d+)\)/i) {
+		return { type => 'FT_CHAR', fixed_len => $1 };
+	}
+
+	if ($type =~ /VARCHAR\((\d+)\)/i) {
+		return { type => 'FT_CHAR', min_len => 0, max_len => $1 };
 	}
 
 	if ($type =~ /^TINYTEXT$/i) {

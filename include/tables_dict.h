@@ -48,6 +48,7 @@ typedef enum field_type {
 	FT_FLOAT,		// supported
 	FT_DOUBLE,		// supported
 	FT_DATE,		// supported
+	FT_TIME,		// supported
 	FT_DATETIME,	// supported
 	FT_ENUM,		// supported
 	FT_SET,

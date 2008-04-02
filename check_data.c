@@ -94,15 +94,27 @@ ibool check_field_limits(field_def_t *field, byte *value, ulint len) {
 		case FT_INT:
 			int_value = get_int_value(field, value);
 			if (debug) printf("INT(%i)=%lli ", field->fixed_length, int_value);
-			if (int_value < field->limits.int_min_val) return FALSE;
-			if (int_value > field->limits.int_max_val) return FALSE;
+			if (int_value < field->limits.int_min_val) {
+    			if (debug) printf(" is less than %lli ", field->limits.int_min_val);
+			    return FALSE;
+			}
+			if (int_value > field->limits.int_max_val) {
+    			if (debug) printf(" is more than %lli ", field->limits.int_max_val);
+			    return FALSE;
+			}
 			break;
 
 		case FT_UINT:
 			uint_value = get_uint_value(field, value);
 			if (debug) printf("UINT(%i)=%llu ", field->fixed_length, uint_value);
-			if (uint_value < field->limits.uint_min_val) return FALSE;
-			if (uint_value > field->limits.uint_max_val) return FALSE;
+			if (uint_value < field->limits.uint_min_val) {
+    			if (debug) printf(" is less than %llu ", field->limits.uint_min_val);
+			    return FALSE;
+			}
+			if (uint_value > field->limits.uint_max_val) {
+    			if (debug) printf(" is more than %llu ", field->limits.uint_max_val);
+			    return FALSE;
+			}
 			break;
 
 		case FT_TEXT:

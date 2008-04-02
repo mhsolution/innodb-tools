@@ -28,14 +28,17 @@ void init_table_defs() {
 		
 		table->n_nullable = 0;
 		table->min_rec_header_len = 0;
+		table->data_min_size = 0;
+		table->data_max_size = 0;
 		
 		for(j = 0; j < MAX_TABLE_FIELDS; j++) {
 			if (table->fields[j].type == FT_NONE) {
 				table->fields_count = j;
 				break;
 			}
-			table->data_min_size += table->fields[j].min_length;
-			table->data_max_size += table->fields[j].max_length;
+
+			table->data_min_size += table->fields[j].min_length + table->fields[j].fixed_length;
+			table->data_max_size += table->fields[j].max_length + table->fields[j].fixed_length;
 			
 			if (table->fields[j].can_be_null) {
 				table->n_nullable++;
@@ -51,6 +54,8 @@ void init_table_defs() {
 			printf(" - total fields: %i\n", table->fields_count);
 			printf(" - nullable fields: %i\n", table->n_nullable);
 			printf(" - minimum header size: %i\n", table->min_rec_header_len);
+			printf(" - minimum rec size: %i\n", table->data_min_size);
+			printf(" - maximum rec size: %i\n", table->data_max_size);
 			printf("\n");
 		}
 	}

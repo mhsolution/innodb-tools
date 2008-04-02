@@ -16,7 +16,9 @@ unsigned long long int get_uint_value(field_def_t *field, byte *value);
 long long int get_int_value(field_def_t *field, byte *value);
 
 void print_datetime(ulonglong ldate);
-void print_date(ulonglong ldate);
+void print_date(ulong ldate);
+void print_time(ulong ltime);
+
 void print_enum(int value, field_def_t *field);
 void print_field_value(byte *value, ulint len, field_def_t *field);
 
