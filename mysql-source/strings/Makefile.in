@@ -100,8 +100,8 @@ am__libmystrings_a_SOURCES_DIST = bmove_upp-sparc.s strappend-sparc.s \
 	int2str.c str2int.c r_strinstr.c strtod.c bcmp.c strtol.c \
 	strtoul.c strtoll.c strtoull.c llstr.c strnlen.c ctype.c \
 	ctype-simple.c ctype-mb.c ctype-utf8.c ctype-bin.c \
-	ctype-latin1.c my_vsnprintf.c xml.c decimal.c ctype-extra.c \
-	my_strtoll10.c str_alloc.c longlong2str_asm.c
+	ctype-latin1.c my_vsnprintf.c xml.c decimal.c my_strtoll10.c \
+	str_alloc.c longlong2str_asm.c
 @ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@am__objects_1 = bmove_upp-sparc.$(OBJEXT) \
 @ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@	strappend-sparc.$(OBJEXT) \
 @ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@	strend-sparc.$(OBJEXT) \
@@ -152,7 +152,6 @@ am__libmystrings_a_SOURCES_DIST = bmove_upp-sparc.s strappend-sparc.s \
 @ASSEMBLER_sparc32_FALSE@@ASSEMBLER_x86_FALSE@	my_vsnprintf.$(OBJEXT) \
 @ASSEMBLER_sparc32_FALSE@@ASSEMBLER_x86_FALSE@	xml.$(OBJEXT) \
 @ASSEMBLER_sparc32_FALSE@@ASSEMBLER_x86_FALSE@	decimal.$(OBJEXT) \
-@ASSEMBLER_sparc32_FALSE@@ASSEMBLER_x86_FALSE@	ctype-extra.$(OBJEXT) \
 @ASSEMBLER_sparc32_FALSE@@ASSEMBLER_x86_FALSE@	my_strtoll10.$(OBJEXT) \
 @ASSEMBLER_sparc32_FALSE@@ASSEMBLER_x86_FALSE@	str_alloc.$(OBJEXT)
 @ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@am__objects_2 = strcont.$(OBJEXT) \
@@ -186,7 +185,6 @@ am__libmystrings_a_SOURCES_DIST = bmove_upp-sparc.s strappend-sparc.s \
 @ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@	my_vsnprintf.$(OBJEXT) \
 @ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@	xml.$(OBJEXT) \
 @ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@	decimal.$(OBJEXT) \
-@ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@	ctype-extra.$(OBJEXT) \
 @ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@	my_strtoll10.$(OBJEXT) \
 @ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@	str_alloc.$(OBJEXT)
 @ASSEMBLER_x86_TRUE@am__objects_2 = bfill.$(OBJEXT) bmove.$(OBJEXT) \
@@ -201,8 +199,7 @@ am__libmystrings_a_SOURCES_DIST = bmove_upp-sparc.s strappend-sparc.s \
 @ASSEMBLER_x86_TRUE@	ctype-mb.$(OBJEXT) ctype-utf8.$(OBJEXT) \
 @ASSEMBLER_x86_TRUE@	ctype-bin.$(OBJEXT) ctype-latin1.$(OBJEXT) \
 @ASSEMBLER_x86_TRUE@	my_vsnprintf.$(OBJEXT) xml.$(OBJEXT) \
-@ASSEMBLER_x86_TRUE@	decimal.$(OBJEXT) ctype-extra.$(OBJEXT) \
-@ASSEMBLER_x86_TRUE@	str_alloc.$(OBJEXT) \
+@ASSEMBLER_x86_TRUE@	decimal.$(OBJEXT) str_alloc.$(OBJEXT) \
 @ASSEMBLER_x86_TRUE@	longlong2str_asm.$(OBJEXT)
 am_libmystrings_a_OBJECTS = $(am__objects_1) $(am__objects_2)
 libmystrings_a_OBJECTS = $(am_libmystrings_a_OBJECTS)
@@ -500,9 +497,9 @@ pkglib_LIBRARIES = libmystrings.a
 @ASSEMBLER_x86_TRUE@ASRCS = strings-x86.s longlong2str-x86.s my_strtoll10-x86.s
 # These file MUST all be on the same line!! Otherwise automake
 # generats a very broken makefile
-@ASSEMBLER_sparc32_FALSE@@ASSEMBLER_x86_FALSE@CSRCS = strxmov.c bmove_upp.c strappend.c strcont.c strend.c strfill.c strcend.c is_prefix.c strstr.c strinstr.c strmake.c strnmov.c strmov.c longlong2str.c bfill.c bmove.c bmove512.c bchange.c strxnmov.c int2str.c str2int.c r_strinstr.c strtod.c bcmp.c strtol.c strtoul.c strtoll.c strtoull.c llstr.c strnlen.c ctype.c ctype-simple.c ctype-mb.c ctype-utf8.c ctype-bin.c ctype-latin1.c my_vsnprintf.c xml.c decimal.c ctype-extra.c my_strtoll10.c str_alloc.c
-@ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@CSRCS = strcont.c strfill.c strcend.c is_prefix.c longlong2str.c bfill.c bmove.c bmove512.c bchange.c strxnmov.c int2str.c str2int.c r_strinstr.c strtod.c bcmp.c strtol.c strtoul.c strtoll.c strtoull.c llstr.c strnlen.c strxmov.c ctype.c ctype-simple.c ctype-mb.c ctype-utf8.c ctype-bin.c ctype-latin1.c my_vsnprintf.c xml.c decimal.c ctype-extra.c my_strtoll10.c str_alloc.c
-@ASSEMBLER_x86_TRUE@CSRCS = bfill.c bmove.c bmove512.c bchange.c strxnmov.c int2str.c str2int.c r_strinstr.c strtod.c bcmp.c strtol.c strtoul.c strtoll.c strtoull.c llstr.c strnlen.c ctype.c ctype-simple.c ctype-mb.c ctype-utf8.c ctype-bin.c ctype-latin1.c my_vsnprintf.c xml.c decimal.c ctype-extra.c str_alloc.c longlong2str_asm.c
+@ASSEMBLER_sparc32_FALSE@@ASSEMBLER_x86_FALSE@CSRCS = strxmov.c bmove_upp.c strappend.c strcont.c strend.c strfill.c strcend.c is_prefix.c strstr.c strinstr.c strmake.c strnmov.c strmov.c longlong2str.c bfill.c bmove.c bmove512.c bchange.c strxnmov.c int2str.c str2int.c r_strinstr.c strtod.c bcmp.c strtol.c strtoul.c strtoll.c strtoull.c llstr.c strnlen.c ctype.c ctype-simple.c ctype-mb.c ctype-utf8.c ctype-bin.c ctype-latin1.c my_vsnprintf.c xml.c decimal.c my_strtoll10.c str_alloc.c
+@ASSEMBLER_sparc32_TRUE@@ASSEMBLER_x86_FALSE@CSRCS = strcont.c strfill.c strcend.c is_prefix.c longlong2str.c bfill.c bmove.c bmove512.c bchange.c strxnmov.c int2str.c str2int.c r_strinstr.c strtod.c bcmp.c strtol.c strtoul.c strtoll.c strtoull.c llstr.c strnlen.c strxmov.c ctype.c ctype-simple.c ctype-mb.c ctype-utf8.c ctype-bin.c ctype-latin1.c my_vsnprintf.c xml.c decimal.c my_strtoll10.c str_alloc.c
+@ASSEMBLER_x86_TRUE@CSRCS = bfill.c bmove.c bmove512.c bchange.c strxnmov.c int2str.c str2int.c r_strinstr.c strtod.c bcmp.c strtol.c strtoul.c strtoll.c strtoull.c llstr.c strnlen.c ctype.c ctype-simple.c ctype-mb.c ctype-utf8.c ctype-bin.c ctype-latin1.c my_vsnprintf.c xml.c decimal.c str_alloc.c longlong2str_asm.c
 libmystrings_a_SOURCES = $(ASRCS) $(CSRCS)
 # Default charset definitions
 EXTRA_DIST = ctype-utf8.c \
@@ -618,7 +615,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bmove_upp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conf_to_src.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ctype-bin.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ctype-extra.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ctype-latin1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ctype-mb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ctype-simple.Po@am__quote@
