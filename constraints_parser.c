@@ -125,7 +125,7 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 		// Check size of fixed-length field
 		if (table->fields[i].fixed_length) {
 			// Check if size is the same and jump to the next field if it is OK
-			if (len == table->fields[i].fixed_length) continue;
+			if (len == table->fields[i].fixed_length || (len == 0 && table->fields[i].can_be_null)) continue;
 			// Invalid fixed length field
 			if (debug) printf("Invalid fixed length field size: %u, but should be %u!\n", len, table->fields[i].fixed_length);
 			return FALSE;

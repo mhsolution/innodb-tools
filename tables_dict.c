@@ -37,15 +37,15 @@ void init_table_defs() {
 				break;
 			}
 
-			table->data_min_size += table->fields[j].min_length + table->fields[j].fixed_length;
-			table->data_max_size += table->fields[j].max_length + table->fields[j].fixed_length;
-			
 			if (table->fields[j].can_be_null) {
 				table->n_nullable++;
 			} else {
+    			table->data_min_size += table->fields[j].min_length + table->fields[j].fixed_length;
 				int size = (table->fields[j].fixed_length ? table->fields[j].fixed_length : table->fields[j].max_length);
 				table->min_rec_header_len += (size > 255 ? 2 : 1);
 			}
+
+			table->data_max_size += table->fields[j].max_length + table->fields[j].fixed_length;
 		}
 		
 		table->min_rec_header_len += (table->n_nullable + 7) / 8;

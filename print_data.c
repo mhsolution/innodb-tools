@@ -1,4 +1,5 @@
 #include <print_data.h>
+#include <decimal.h>
 
 /*******************************************************************/
 void print_datetime(ulonglong ldate) {
@@ -73,6 +74,34 @@ long long int get_int_value(field_def_t *field, byte *value) {
 }
 
 /*******************************************************************/
+void print_string(char *value, ulint len) {
+    ulint i;
+	printf("\"");
+    for(i = 0; i < len; i++) {
+		if (value[i] == '"') printf("\\\"");
+		else if (value[i] == '\n') printf("\\n");
+		else if (value[i] == '\r') printf("\\r");
+		else printf("%c", value[i]);
+	}
+	printf("\"");
+}
+
+/*******************************************************************/
+void print_decimal(byte *value, field_def_t *field) {
+    char string_buf[256];
+    decimal_digit_t dec_buf[256];
+    int len = 255;
+    
+    decimal_t dec;
+    dec.buf = dec_buf;
+    dec.len = 256;
+    
+    bin2decimal((char*)value, &dec, field->decimal_precision, field->decimal_digits);
+    decimal2string(&dec, string_buf, &len, field->decimal_precision, field->decimal_digits, ' ');
+    print_string(string_buf, len);
+}
+
+/*******************************************************************/
 void print_field_value(byte *value, ulint len, field_def_t *field) {
 	int i;
 	
@@ -82,14 +111,7 @@ void print_field_value(byte *value, ulint len, field_def_t *field) {
 
 		case FT_CHAR:
 		case FT_TEXT:
-    		printf("\"");
-		    for(i = 0; i < len; i++) {
-				if (value[i] == '"') printf("\\\"");
-				else if (value[i] == '\n') printf("\\n");
-				else if (value[i] == '\r') printf("\\r");
-				else printf("%c", value[i]);
-    		}
-    		printf("\"");
+            print_string((char*)value, len);
 			break;
 
 		case FT_UINT:
@@ -139,7 +161,7 @@ void print_field_value(byte *value, ulint len, field_def_t *field) {
 			break;
 
         case FT_DECIMAL:
-            printf("DECIMAL");
+            print_decimal(value, field);
             break;
 
 		default:
