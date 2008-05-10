@@ -67,11 +67,12 @@ typedef struct field_def {
 	ibool can_be_null;
 	int fixed_length;
 
-    // For DECIMAL numbers only
-    int decimal_precision;
-    int decimal_digits;
+    	// For DECIMAL numbers only
+	int decimal_precision;
+	int decimal_digits;
 	
 	ibool has_limits;
+	ibool char_rstrip_spaces;
 	field_limits_t limits;
 } field_def_t;
 

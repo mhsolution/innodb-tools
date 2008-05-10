@@ -1,4 +1,5 @@
 #include <check_data.h>
+#include <print_data.h>
 
 // Linux has no isnumber function? (Debian 4.0 has no such function)
 #ifndef isnumber

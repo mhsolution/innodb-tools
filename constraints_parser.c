@@ -22,7 +22,7 @@ bool process_compact = 0;
 
 /*******************************************************************/
 ulint process_ibrec(page_t *page, rec_t *rec, table_def_t *table, ulint *offsets) {
-	ulint info_bits, data_size;
+	ulint data_size;
 	int i;
 
 	// Print table name
@@ -85,7 +85,7 @@ static ibool check_constraints(rec_t *rec, table_def_t* table, ulint* offsets) {
 		// Check limits
 		if (!table->fields[i].has_limits) continue;
 		if (!check_field_limits(&(table->fields[i]), field, len)) {
-			if (debug) printf("LIMITS check failed(field = %p, len = %d)!\n", field, len);
+			if (debug) printf("LIMITS check failed(field = %p, len = %ld)!\n", field, len);
 			return FALSE;
 		}
 	}
@@ -127,7 +127,7 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 			// Check if size is the same and jump to the next field if it is OK
 			if (len == table->fields[i].fixed_length || (len == 0 && table->fields[i].can_be_null)) continue;
 			// Invalid fixed length field
-			if (debug) printf("Invalid fixed length field size: %u, but should be %u!\n", len, table->fields[i].fixed_length);
+			if (debug) printf("Invalid fixed length field size: %lu, but should be %u!\n", len, table->fields[i].fixed_length);
 			return FALSE;
 		}
 		
@@ -141,7 +141,7 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 		
 		// Check size limits for varlen fields
 		if (len < table->fields[i].min_length || len > table->fields[i].max_length) {
-			if (debug) printf("Length limits check failed (%u < %u || %u > %u)!\n", len, table->fields[i].min_length, len, table->fields[i].max_length);
+			if (debug) printf("Length limits check failed (%lu < %u || %lu > %u)!\n", len, table->fields[i].min_length, len, table->fields[i].max_length);
 			return FALSE;
 		}
 
@@ -228,7 +228,7 @@ static ibool ibrec_init_offsets_new(page_t *page, rec_t* rec, table_def_t* table
 		}
 	resolved:
 		if (rec + offs - page > UNIV_PAGE_SIZE) {
-			if (debug) printf("Invalid offset for field %i: %li\n", i, offs);
+			if (debug) printf("Invalid offset for field %li: %li\n", i, offs);
 			return FALSE;
 		}
 		rec_offs_base(offsets)[i + 1] = len;
@@ -262,7 +262,7 @@ static ibool ibrec_init_offsets_old(page_t *page, rec_t* rec, table_def_t* table
 			}
 
     		if (rec + offs - page > UNIV_PAGE_SIZE) {
-    			if (debug) printf("Invalid offset for field %i: %li\n", i, offs);
+    			if (debug) printf("Invalid offset for field %li: %li\n", i, offs);
     			return FALSE;
     		}
 
@@ -285,7 +285,7 @@ static ibool ibrec_init_offsets_old(page_t *page, rec_t* rec, table_def_t* table
 			}
 
     		if (rec + offs - page > UNIV_PAGE_SIZE) {
-    			if (debug) printf("Invalid offset for field %i: %li\n", i, offs);
+    			if (debug) printf("Invalid offset for field %li: %li\n", i, offs);
     			return FALSE;
     		}
 
@@ -317,11 +317,11 @@ ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *of
 	// Check the record's data size
 	data_size = rec_offs_data_size(offsets);
 	if (data_size > table->data_max_size) {
-        if (debug) printf("DATA_SIZE=FAIL(%lu > %lu) ", data_size, table->data_max_size);
+        if (debug) printf("DATA_SIZE=FAIL(%lu > %lu) ", (long int)data_size, (long int)table->data_max_size);
         return FALSE;
 	}
 	if (data_size < table->data_min_size) {
-        if (debug) printf("DATA_SIZE=FAIL(%lu < %lu) ", data_size, table->data_min_size);
+        if (debug) printf("DATA_SIZE=FAIL(%lu < %lu) ", (long int)data_size, (long int)table->data_min_size);
         return FALSE;
 	}
 	if (debug) printf("DATA_SIZE=OK ");
@@ -331,7 +331,6 @@ ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *of
 	if (debug) printf("FIELD_SIZES=OK ");
 	
 	// This record could be valid and useful for us
-	printf(""); // STRANGE ERROR if this is removed (function never returns true)
 	return TRUE;
 }
 
@@ -355,7 +354,7 @@ void process_ibpage(page_t *page) {
 	ulint page_id;
 	rec_t *origin;
 	ulint offsets[MAX_TABLE_FIELDS + 2];
-	ulint offset, rec_size, i;
+	ulint offset, i;
 	
 	// Read page id
 	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
@@ -399,7 +398,6 @@ void process_ibpage(page_t *page) {
 void process_ibfile(int fn) {
 	int read_bytes;
 	page_t *page = malloc(UNIV_PAGE_SIZE);
-	char tmp[20];
     struct stat st;
     off_t pos;
     ulint free_offset;

@@ -39,11 +39,11 @@ void process_ibpage(page_t *page) {
     if (use_filter_id && (index_id.low != filter_id.low || index_id.high != filter_id.high)) return;
 		
 	// Create table directory
-	sprintf(tmp, "pages-%u/%lu-%lu", timestamp, index_id.high, index_id.low);
+	sprintf(tmp, "pages-%u/%lu-%lu", (unsigned int)timestamp, index_id.high, index_id.low);
 	mkdir(tmp, 0755);
 	
 	// Compose page file_name
-	sprintf(tmp, "pages-%u/%lu-%lu/%lu-%08lu.page", timestamp, index_id.high, index_id.low, id++, page_id);
+	sprintf(tmp, "pages-%u/%lu-%lu/%lu-%08lu.page", (unsigned int)timestamp, index_id.high, index_id.low, id++, page_id);
 	
 	printf("Read page #%lu.. saving it to %s\n", page_id, tmp);
 
@@ -69,7 +69,7 @@ void process_ibfile(int fn) {
 
 	// Create pages directory
 	timestamp = time(0);
-	sprintf(tmp, "pages-%u", timestamp);
+	sprintf(tmp, "pages-%u", (unsigned int)timestamp);
 	mkdir(tmp, 0755);
 	
 	printf("Read data from fn=%d...\n", fn);

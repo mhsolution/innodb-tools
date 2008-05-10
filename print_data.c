@@ -74,16 +74,40 @@ long long int get_int_value(field_def_t *field, byte *value) {
 }
 
 /*******************************************************************/
-void print_string(char *value, ulint len) {
-    ulint i;
-	printf("\"");
+inline void print_string(char *value, ulint len, field_def_t *field) {
+    uint i, num_spaces = 0, out_pos = 0;
+    static char out[32768];
+    
+    out[out_pos++] = '"';
     for(i = 0; i < len; i++) {
-		if (value[i] == '"') printf("\\\"");
-		else if (value[i] == '\n') printf("\\n");
-		else if (value[i] == '\r') printf("\\r");
-		else printf("%c", value[i]);
+        if (value[i] != ' ' && num_spaces > 0) {
+            while(num_spaces > 0) {
+                out[out_pos++] = ' ';
+                num_spaces--;
+            }
+        }
+		if (value[i] == '"') out[out_pos++] = '\\', out[out_pos++] = '"';
+		else if (value[i] == '\n') out[out_pos++] = '\\', out[out_pos++] = 'n';
+		else if (value[i] == '\r') out[out_pos++] = '\\', out[out_pos++] = 'r';
+		else if (value[i] == '\t') out[out_pos++] = '\\', out[out_pos++] = 't';
+    	else {
+            if (value[i] == ' ') {
+                num_spaces++;
+            } else {
+                out[out_pos++] = value[i];
+            }
+        }
 	}
-	printf("\"");
+
+    if (num_spaces > 0 && !field->char_rstrip_spaces) {
+        while(num_spaces > 0) {
+            out[out_pos++] = ' ';
+            num_spaces--;
+        }
+    }
+    out[out_pos++] = '"';
+    out[out_pos++] = 0;
+    fputs(out, stdout);
 }
 
 /*******************************************************************/
@@ -98,50 +122,34 @@ void print_decimal(byte *value, field_def_t *field) {
     
     bin2decimal((char*)value, &dec, field->decimal_precision, field->decimal_digits);
     decimal2string(&dec, string_buf, &len, field->decimal_precision, field->decimal_digits, ' ');
-    print_string(string_buf, len);
+    print_string(string_buf, len, field);
 }
 
 /*******************************************************************/
 void print_field_value(byte *value, ulint len, field_def_t *field) {
-	int i;
-	
 	switch (field->type) {
 		case FT_INTERNAL:
     		break;
 
 		case FT_CHAR:
 		case FT_TEXT:
-            print_string((char*)value, len);
+            print_string((char*)value, len, field);
 			break;
 
 		case FT_UINT:
-			switch (field->fixed_length) {
-				case 1: printf("%u", mach_read_from_1(value)); break;
-				case 2: printf("%u", mach_read_from_2(value)); break;
-				case 3: printf("%lu", mach_read_from_3(value) & 0x3FFFFFUL); break;
-				case 4: printf("%lu", mach_read_from_4(value)); break;
-				case 8: printf("%llu", make_ulonglong(mach_read_from_8(value))); break;
-				default: printf("uint_undef(%d)", field->fixed_length);
-			}
+            printf("%llu", get_uint_value(field, value));
 			break;
 
 		case FT_INT:
-			switch (field->fixed_length) {
-				case 1: printf("%d", mach_read_from_1(value) & ~(1<<7)); break;
-				case 2: printf("%i", mach_read_from_2(value) & ~(1<<15)); break;
-				case 3: printf("%li", mach_read_from_3(value) & 0x3FFFFFUL & ~(1L<<23)); break;
-				case 4: printf("%li", mach_read_from_4(value) & ~(1L<<31)); break;
-				case 8: printf("%lli", make_longlong(mach_read_from_8(value)) & ~(1LL<<63)); break;
-				default: printf("int_undef(%d)", field->fixed_length);
-			}
+            printf("%lli", get_int_value(field, value));
 			break;
 
 		case FT_FLOAT:
-			printf("%f", mach_float_read(value)); break;
+			printf("%f", mach_float_read(value));
 			break;
 
 		case FT_DOUBLE:
-			printf("%lf", mach_double_read(value)); break;
+			printf("%lf", mach_double_read(value));
 			break;
 
 		case FT_DATETIME:
