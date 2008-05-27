@@ -20,6 +20,10 @@ bool process_redundant = 0;
 dulint filter_id;
 bool use_filter_id = 0;
 
+bool count_pages = 0;
+bool ignore_crap = 0;
+unsigned int page_counters[1000][10000UL]; // FIXME: need a hash here
+
 /*******************************************************************/
 void process_ibpage(page_t *page) {
     static ulint id = 0;
@@ -32,11 +36,28 @@ void process_ibpage(page_t *page) {
 	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
 	index_id = mach_read_from_8(page + PAGE_HEADER + PAGE_INDEX_ID);
 	
-	// Skip empty pages
-    //if (index_id.high == 0 && index_id.low == 0) return;
+    // Skip empty pages
+    if (ignore_crap && index_id.high == 0 && index_id.low == 0) return;
 	
 	// Skip tables if filter used
     if (use_filter_id && (index_id.low != filter_id.low || index_id.high != filter_id.high)) return;
+		
+	if (count_pages) {
+	    if (index_id.high >= 1000) {
+            if (ignore_crap) return;
+            printf("ERROR: Too high tablespace id! %ld >= 1000!\n", index_id.high);
+            exit(1);
+	    }
+
+	    if (index_id.low >= 10000) {
+            if (ignore_crap) return;
+            printf("ERROR: Too high index id! %ld >= 10000!\n", index_id.low);
+            exit(1);
+	    }
+	    
+        page_counters[index_id.high][index_id.low]++;
+        return;
+	}
 		
 	// Create table directory
 	sprintf(tmp, "pages-%u/%lu-%lu", (unsigned int)timestamp, index_id.high, index_id.low);
@@ -69,8 +90,10 @@ void process_ibfile(int fn) {
 
 	// Create pages directory
 	timestamp = time(0);
-	sprintf(tmp, "pages-%u", (unsigned int)timestamp);
-	mkdir(tmp, 0755);
+	if (!count_pages) {
+	    sprintf(tmp, "pages-%u", (unsigned int)timestamp);
+	    mkdir(tmp, 0755);
+	}
 	
 	printf("Read data from fn=%d...\n", fn);
 
@@ -78,7 +101,7 @@ void process_ibfile(int fn) {
 	while ((read_bytes = read(fn, page, UNIV_PAGE_SIZE)) == UNIV_PAGE_SIZE) {
         pos = lseek(fn, 0, SEEK_CUR);
         if (pos % (UNIV_PAGE_SIZE * 1000) == 0) {
-            printf("%.2f%% done\n", 100.0 * pos / st.st_size);
+            fprintf(stderr, "%.2f%% done\n", 100.0 * pos / st.st_size);
         }
 //	    if (deleted_pages_only) {
 //    		free_offset = page_header_get_field(page, PAGE_FREE);
@@ -114,6 +137,26 @@ int open_ibfile(char *fname) {
 }
 
 /*******************************************************************/
+void init_page_counters() {
+    int i, j;
+    
+    for (i = 0; i < 1000; i++)
+        for (j = 0; j < 10000; j++)
+            page_counters[i][j] = 0;
+}
+
+/*******************************************************************/
+void dump_page_counters() {
+    int i, j;
+    
+    for (i = 0; i < 1000; i++)
+        for (j = 0; j < 10000; j++) {
+            if (page_counters[i][j] == 0) continue;
+            printf("%d:%d\t%u\n", i, j, page_counters[i][j]);
+        }
+}
+
+/*******************************************************************/
 void set_filter_id(char *id) {
     int cnt = sscanf(id, "%lu:%lu", &filter_id.high, &filter_id.low);
     if (cnt < 2) {
@@ -125,13 +168,15 @@ void set_filter_id(char *id) {
 /*******************************************************************/
 void usage() {
 	error(
-	  "Usage: ./page_parser -4|-5 [-dDh] -f <innodb_datafile> [-T N:M]\n"
+	  "Usage: ./page_parser -4|-5 [-dDhcC] -f <innodb_datafile> [-T N:M]\n"
 	  "  Where\n"
 	  "    -h  -- Print this help\n"
 	  "    -d  -- Process only those pages which potentially could have deleted records (default = NO)\n"
 	  "    -4  -- innodb_datafile is in REDUNDANT format\n"
 	  "    -5  -- innodb_datafile is in COMPACT format\n"
 	  "    -T  -- retrieves only pages with index id = NM (N - high word, M - low word of id)\n"
+	  "    -c  -- count pages in the tablespace and group them by index id\n"
+	  "    -C  -- count pages in the tablespace and group them by index id (and ignore too high/zero indexes)\n"
 	);
 }
 
@@ -139,7 +184,7 @@ void usage() {
 int main(int argc, char **argv) {
 	int fn = 0, ch;
 
-	while ((ch = getopt(argc, argv, "45Vhdf:T:")) != -1) {
+	while ((ch = getopt(argc, argv, "45VhdcCf:T:")) != -1) {
 		switch (ch) {
 			case 'd':
 				deleted_pages_only = 1;
@@ -164,6 +209,18 @@ int main(int argc, char **argv) {
             case 'T':
                 set_filter_id(optarg);
                 break;
+                
+            case 'c':
+                count_pages = 1;
+                ignore_crap = 0;
+                init_page_counters();
+                break;
+
+            case 'C':
+                count_pages = 1;
+                ignore_crap = 1;
+                init_page_counters();
+                break;
 
 			default:
 			case '?':
@@ -172,18 +229,18 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (fn != 0) {
-		process_ibfile(fn);
-		close(fn);
-	} else usage();
-
 	if (!process_compact && !process_redundant) {
         printf("Error: Please, specify what format your datafile in. Use -4 for mysql 4.1 and below and -5 for 5.X+\n");
         usage();
 	}
-	
-	process_ibfile(fn);
-	close(fn);
+
+	if (fn != 0) {
+		process_ibfile(fn);
+		close(fn);
+		if (count_pages) {
+            dump_page_counters();
+		}
+	} else usage();
 	
 	return 0;
 }

@@ -20,6 +20,9 @@ bool debug = 0;
 bool process_redundant = 0;
 bool process_compact = 0;
 
+dulint filter_id;
+bool use_filter_id = 0;
+
 /*******************************************************************/
 ulint process_ibrec(page_t *page, rec_t *rec, table_def_t *table, ulint *offsets) {
 	ulint data_size;
@@ -58,7 +61,7 @@ ulint process_ibrec(page_t *page, rec_t *rec, table_def_t *table, ulint *offsets
 }
 
 /*******************************************************************/
-static ibool check_constraints(rec_t *rec, table_def_t* table, ulint* offsets) {
+static inline ibool check_constraints(rec_t *rec, table_def_t* table, ulint* offsets) {
 	int i;
 	
 	if (debug) {
@@ -95,7 +98,7 @@ static ibool check_constraints(rec_t *rec, table_def_t* table, ulint* offsets) {
 }
 
 /*******************************************************************/
-ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
+inline ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 	int i;
 
 	if (debug) {
@@ -153,7 +156,7 @@ ibool check_fields_sizes(rec_t *rec, table_def_t *table, ulint *offsets) {
 }
 
 /*******************************************************************/
-static ibool ibrec_init_offsets_new(page_t *page, rec_t* rec, table_def_t* table, ulint* offsets) {
+static inline ibool ibrec_init_offsets_new(page_t *page, rec_t* rec, table_def_t* table, ulint* offsets) {
 	ulint i = 0;
 	ulint offs;
 	const byte* nulls;
@@ -238,7 +241,7 @@ static ibool ibrec_init_offsets_new(page_t *page, rec_t* rec, table_def_t* table
 }
 
 /*******************************************************************/
-static ibool ibrec_init_offsets_old(page_t *page, rec_t* rec, table_def_t* table, ulint* offsets) {
+static inline ibool ibrec_init_offsets_old(page_t *page, rec_t* rec, table_def_t* table, ulint* offsets) {
 	ulint i = 0;
 	ulint offs;
 
@@ -297,7 +300,7 @@ static ibool ibrec_init_offsets_old(page_t *page, rec_t* rec, table_def_t* table
 }
 
 /*******************************************************************/
-ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *offsets) {
+inline ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *offsets) {
 	ulint offset, data_size;
 
 	// Check if given origin is valid
@@ -335,7 +338,7 @@ ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ulint *of
 }
 
 /*******************************************************************/
-bool check_page_format(page_t *page) {
+inline bool check_page_format(page_t *page) {
 	if (process_redundant && page_is_comp(page)) {
 		if (debug) printf("Page is in COMPACT format while we're looking for REDUNDANT - skipping\n");
 		return FALSE;
@@ -351,11 +354,23 @@ bool check_page_format(page_t *page) {
 
 /*******************************************************************/
 void process_ibpage(page_t *page) {
-	ulint page_id;
+    ulint page_id;
 	rec_t *origin;
 	ulint offsets[MAX_TABLE_FIELDS + 2];
 	ulint offset, i;
 	
+	// Skip tables if filter used
+    if (use_filter_id) {
+        dulint index_id = mach_read_from_8(page + PAGE_HEADER + PAGE_INDEX_ID);
+        if (index_id.low != filter_id.low || index_id.high != filter_id.high) {
+            if (debug) {
+            	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
+                printf("Skipped using index id filter: %lu!\n", page_id);
+            }
+            return;
+        }
+    }
+
 	// Read page id
 	page_id = mach_read_from_4(page + FIL_PAGE_OFFSET);
 	if (debug) printf("Page id: %lu\n", page_id);
@@ -364,7 +379,7 @@ void process_ibpage(page_t *page) {
     if (!check_page_format(page)) return;
 
 	// Find possible data area start point (at least 5 bytes of utility data)
-	offset = record_extra_bytes;
+	offset = 100 + record_extra_bytes;
 	if (debug) printf("Starting offset: %lu. Checking %d table definitions.\n", offset, table_definitions_cnt);
 	
 	// Walk through all possible positions to the end of page 
@@ -446,9 +461,18 @@ int open_ibfile(char *fname) {
 }
 
 /*******************************************************************/
+void set_filter_id(char *id) {
+    int cnt = sscanf(id, "%lu:%lu", &filter_id.high, &filter_id.low);
+    if (cnt < 2) {
+        error("Invalid index id provided! It should be in N:M format, where N and M are unsigned integers");
+    }
+    use_filter_id = 1;
+}
+
+/*******************************************************************/
 void usage() {
 	error(
-	  "Usage: ./constraints_parser -4|-5 [-dDV] -f <innodb_datafile>\n"
+	  "Usage: ./constraints_parser -4|-5 [-dDV] -f <innodb_datafile> [-T N:M]\n"
 	  "  Where\n"
 	  "    -h  -- Print this help\n"
 	  "    -d  -- Process only those pages which potentially could have deleted records (default = NO)\n"
@@ -456,6 +480,7 @@ void usage() {
 	  "    -V  -- Verbode mode (lots of debug information)\n"
 	  "    -4  -- innodb_datafile is in REDUNDANT format\n"
 	  "    -5  -- innodb_datafile is in COMPACT format\n"
+	  "    -T  -- retrieves only pages with index id = NM (N - high word, M - low word of id)\n"
 	  "\n"
 	);
 }
@@ -466,7 +491,7 @@ int main(int argc, char **argv) {
 
 	setbuf(stdout, NULL);
 
-	while ((ch = getopt(argc, argv, "45hdDVf:")) != -1) {
+	while ((ch = getopt(argc, argv, "45hdDVf:T:")) != -1) {
 		switch (ch) {
 			case 'd':
 				deleted_pages_only = 1;
@@ -492,6 +517,10 @@ int main(int argc, char **argv) {
                 process_compact = 1;
                 break;
 
+            case 'T':
+                set_filter_id(optarg);
+                break;
+                
 			default:
 			case '?':
 			case 'h':

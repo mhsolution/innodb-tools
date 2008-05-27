@@ -2,7 +2,7 @@
 #include <decimal.h>
 
 /*******************************************************************/
-void print_datetime(ulonglong ldate) {
+inline void print_datetime(ulonglong ldate) {
 	int year, month, day, hour, min, sec;
 	
 	ldate &= ~(1ULL << 63);
@@ -18,7 +18,7 @@ void print_datetime(ulonglong ldate) {
 }
 
 /*******************************************************************/
-void print_date(ulong ldate) {
+inline void print_date(ulong ldate) {
 	int year, month, day;
 
 	ldate &= ~(1UL << 23);
@@ -31,7 +31,7 @@ void print_date(ulong ldate) {
 }
 
 /*******************************************************************/
-void print_time(ulong ltime) {
+inline void print_time(ulong ltime) {
 	int hour, min, sec;
 
 	ltime &= ~(1UL << 23);
@@ -45,12 +45,12 @@ void print_time(ulong ltime) {
 
 
 /*******************************************************************/
-void print_enum(int value, field_def_t *field) {
+inline void print_enum(int value, field_def_t *field) {
 	printf("\"%s\"", field->limits.enum_values[value-1]);
 }
 
 /*******************************************************************/
-unsigned long long int get_uint_value(field_def_t *field, byte *value) {
+inline unsigned long long int get_uint_value(field_def_t *field, byte *value) {
 	switch (field->fixed_length) {
 		case 1: return mach_read_from_1(value);
 		case 2: return mach_read_from_2(value);
@@ -62,7 +62,7 @@ unsigned long long int get_uint_value(field_def_t *field, byte *value) {
 }
 
 /*******************************************************************/
-long long int get_int_value(field_def_t *field, byte *value) {
+inline long long int get_int_value(field_def_t *field, byte *value) {
 	switch (field->fixed_length) {
 		case 1: return mach_read_from_1(value) & ~(1<<7);
 		case 2: return mach_read_from_2(value) & ~(1<<15);
@@ -86,7 +86,8 @@ inline void print_string(char *value, ulint len, field_def_t *field) {
                 num_spaces--;
             }
         }
-		if (value[i] == '"') out[out_pos++] = '\\', out[out_pos++] = '"';
+		if (value[i] == '\\') out[out_pos++] = '\\', out[out_pos++] = '\\';
+		else if (value[i] == '"') out[out_pos++] = '\\', out[out_pos++] = '"';
 		else if (value[i] == '\n') out[out_pos++] = '\\', out[out_pos++] = 'n';
 		else if (value[i] == '\r') out[out_pos++] = '\\', out[out_pos++] = 'r';
 		else if (value[i] == '\t') out[out_pos++] = '\\', out[out_pos++] = 't';
@@ -111,7 +112,7 @@ inline void print_string(char *value, ulint len, field_def_t *field) {
 }
 
 /*******************************************************************/
-void print_decimal(byte *value, field_def_t *field) {
+inline void print_decimal(byte *value, field_def_t *field) {
     char string_buf[256];
     decimal_digit_t dec_buf[256];
     int len = 255;
@@ -126,7 +127,7 @@ void print_decimal(byte *value, field_def_t *field) {
 }
 
 /*******************************************************************/
-void print_field_value(byte *value, ulint len, field_def_t *field) {
+inline void print_field_value(byte *value, ulint len, field_def_t *field) {
 	switch (field->type) {
 		case FT_INTERNAL:
     		break;

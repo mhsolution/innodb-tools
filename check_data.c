@@ -2,11 +2,11 @@
 #include <print_data.h>
 
 // Linux has no isnumber function? (Debian 4.0 has no such function)
-#ifndef isnumber
-inline int isnumber(char c) {
-    return (isdigit(c) || c == '.' || c == '-');
-}
-#endif
+//#ifndef isnumber
+//inline int isnumber(char c) {
+//    return (isdigit(c) || c == '.' || c == '-');
+//}
+//#endif
 
 /*******************************************************************/
 inline ulonglong make_ulonglong(dulint x) {
@@ -25,7 +25,7 @@ inline longlong make_longlong(dulint x) {
 }
 
 /*******************************************************************/
-ibool check_datetime(ulonglong ldate) {
+inline ibool check_datetime(ulonglong ldate) {
 	int year, month, day, hour, min, sec;
 	
 	ldate &= ~(1ULL << 63);
@@ -67,7 +67,7 @@ ibool check_datetime(ulonglong ldate) {
 }
 
 /*******************************************************************/
-ibool check_char_ascii(char *value, ulint len) {
+inline ibool check_char_ascii(char *value, ulint len) {
 	char *p = value;
 	if (!len) return TRUE;
 	do { 
@@ -77,7 +77,7 @@ ibool check_char_ascii(char *value, ulint len) {
 }
 
 /*******************************************************************/
-ibool check_char_digits(char *value, ulint len) {
+inline ibool check_char_digits(char *value, ulint len) {
 	char *p = value;
 	if (!len) return TRUE;
 	do { 

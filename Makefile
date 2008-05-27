@@ -1,6 +1,7 @@
 # Uncomment to build static binaries
 #CFLAGS=-static
 CFLAGS=-DHAVE_OFFSET64_T -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE=1 -D_LARGEFILE_SOURCE=1 -Wall -O3
+#CFLAGS=-DHAVE_OFFSET64_T -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE=1 -D_LARGEFILE_SOURCE=1 -Wall
 
 INCLUDES=-I include -I mysql-source/include -I mysql-source/innobase/include
 
