@@ -1,15 +1,19 @@
-#!/usr/bin/env perl
+#!/usr/bin/env perl -w
 
-$files = {};
+use strict;
 
-mkdir("dump");
+my $dir = $ARGV[0] || "dump";
+print "Dir: $dir\n";
+mkdir($dir);
 
-while(<>) {
+my $files = {};
+while(<STDIN>) {
 	/(.*?)\t(.*)/;
 	unless ($files->{$1}) {
-		open $files->{$1}, ">dump/$1.csv";
+		print "Opening file '$dir/$1.csv'\n";
+		open($files->{$1}, ">$dir/$1.csv");
 	}
-	$F = $files->{$1};
+	my $F = $files->{$1};
 	print($F "$2\n");
 }
 
