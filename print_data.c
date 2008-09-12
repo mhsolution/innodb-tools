@@ -95,7 +95,11 @@ inline void print_string(char *value, ulint len, field_def_t *field) {
             if (value[i] == ' ') {
                 num_spaces++;
             } else {
-                out[out_pos++] = value[i];
+                if ((int)value[i] < 32) {
+                    out_pos += sprintf(out + out_pos, "\\x%02x", (uchar)value[i]);
+                } else {
+                    out[out_pos++] = value[i];
+                }
             }
         }
 	}
