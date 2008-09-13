@@ -392,14 +392,14 @@ void process_ibpage(page_t *page) {
 		// Check all tables
 		for (i = 0; i < table_definitions_cnt; i++) {
 			// Get table info
-			table_def_t table = table_definitions[i];
-			if (debug) printf(" (%s) ", table.name);
+			table_def_t *table = &(table_definitions[i]);
+			if (debug) printf(" (%s) ", table->name);
 
 			// Check if origin points to a valid record
-			if (check_for_a_record(page, origin, &table, offsets) && check_constraints(origin, &table, offsets)) {
+			if (check_for_a_record(page, origin, table, offsets) && check_constraints(origin, table, offsets)) {
 			    if (debug) printf("\n---------------------------------------------------\n"
-			       			     "PAGE%lu: Found a table %s record: %p (offset = %lu)\n", page_id, table.name, origin, offset);
-			    offset += process_ibrec(page, origin, &table, offsets);
+			       			     "PAGE%lu: Found a table %s record: %p (offset = %lu)\n", page_id, table->name, origin, offset);
+			    offset += process_ibrec(page, origin, table, offsets);
 			    break;
 		    }
 		}
