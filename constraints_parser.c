@@ -230,8 +230,9 @@ static inline ibool ibrec_init_offsets_new(page_t *page, rec_t* rec, table_def_t
 			len = offs += field->fixed_length;
 		}
 	resolved:
+        offs &= 0xffff;
 		if (rec + offs - page > UNIV_PAGE_SIZE) {
-			if (debug) printf("Invalid offset for field %li: %li\n", i, offs);
+			if (debug) printf("Invalid offset for field %lu: %lu\n", i, offs);
 			return FALSE;
 		}
 		rec_offs_base(offsets)[i + 1] = len;
@@ -264,8 +265,9 @@ static inline ibool ibrec_init_offsets_old(page_t *page, rec_t* rec, table_def_t
 				offs |= REC_OFFS_SQL_NULL;
 			}
 
+            offs &= 0xffff;
     		if (rec + offs - page > UNIV_PAGE_SIZE) {
-    			if (debug) printf("Invalid offset for field %li: %li\n", i, offs);
+    			if (debug) printf("Invalid offset for field %lu: %lu\n", i, offs);
     			return FALSE;
     		}
 
@@ -287,8 +289,9 @@ static inline ibool ibrec_init_offsets_old(page_t *page, rec_t* rec, table_def_t
 				offs |= REC_OFFS_EXTERNAL;
 			}
 
+            offs &= 0xffff;
     		if (rec + offs - page > UNIV_PAGE_SIZE) {
-    			if (debug) printf("Invalid offset for field %li: %li\n", i, offs);
+    			if (debug) printf("Invalid offset for field %lu: %lu\n", i, offs);
     			return FALSE;
     		}
 
