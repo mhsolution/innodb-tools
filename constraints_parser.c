@@ -16,6 +16,7 @@
 // Global flags from getopt
 bool deleted_pages_only = 0;
 bool deleted_records_only = 0;
+bool undeleted_records_only = 0;
 bool debug = 0;
 bool process_redundant = 0;
 bool process_compact = 0;
@@ -314,6 +315,9 @@ inline ibool check_for_a_record(page_t *page, rec_t *rec, table_def_t *table, ul
 	// Skip non-deleted records
 	if (deleted_records_only && !rec_get_deleted_flag(rec, page_is_comp(page))) return FALSE;
 	if (debug) printf("DELETED=OK ");
+	// Skip non-deleted records
+	if (undeleted_records_only && rec_get_deleted_flag(rec, page_is_comp(page))) return FALSE;
+	if (debug) printf("UNDELETED=OK ");
 
 	// Get field offsets for current table
 	if (process_compact && !ibrec_init_offsets_new(page, rec, table, offsets)) return FALSE;
@@ -480,6 +484,7 @@ void usage() {
 	  "    -h  -- Print this help\n"
 	  "    -d  -- Process only those pages which potentially could have deleted records (default = NO)\n"
 	  "    -D  -- Recover deleted rows only (default = NO)\n"
+	  "    -U  -- Recover UNdeleted rows only (default = NO)\n"
 	  "    -V  -- Verbode mode (lots of debug information)\n"
 	  "    -4  -- innodb_datafile is in REDUNDANT format\n"
 	  "    -5  -- innodb_datafile is in COMPACT format\n"
@@ -494,7 +499,7 @@ int main(int argc, char **argv) {
 
 	setbuf(stdout, NULL);
 
-	while ((ch = getopt(argc, argv, "45hdDVf:T:")) != -1) {
+	while ((ch = getopt(argc, argv, "45hdDUVf:T:")) != -1) {
 		switch (ch) {
 			case 'd':
 				deleted_pages_only = 1;
@@ -502,6 +507,10 @@ int main(int argc, char **argv) {
 
 			case 'D':
 			    deleted_records_only = 1;
+				break;
+
+			case 'U':
+			    undeleted_records_only = 1;
 				break;
 
 			case 'f':
