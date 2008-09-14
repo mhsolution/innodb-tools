@@ -81,7 +81,7 @@ inline ibool check_char_digits(char *value, ulint len) {
 	char *p = value;
 	if (!len) return TRUE;
 	do { 
-		if (!isnumber(*p)) return FALSE;
+		if (!isdigit(*p)) return FALSE;
 	} while (++p < value + len);
 	return TRUE;
 }
