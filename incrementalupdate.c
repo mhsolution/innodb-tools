@@ -221,35 +221,43 @@ printf("Comparing files %s and %s\n", argv[1], argv[2]);
       return 1;
     }
 
-        /* get position before reading ?page from backup file */
-        pos = ftell(b);
-        /* read page from backup file */
+    /* get position before reading page from backup file */
+    pos = ftell(b);
+
+    /* read page from backup file */
     bytes= fread(op, 1, UNIV_PAGE_SIZE, b);
+
     /* check the "stored log sequence numbers" */
     logseq= mach_read_from_4(p + FIL_PAGE_LSN + 4);
     nlogseq= mach_read_from_4(op + FIL_PAGE_LSN + 4);
     logseqfield= mach_read_from_4(p + UNIV_PAGE_SIZE - FIL_PAGE_END_LSN_OLD_CHKSUM + 4);
     nlogseqfield= mach_read_from_4(op + UNIV_PAGE_SIZE - FIL_PAGE_END_LSN_OLD_CHKSUM + 4);
+
+    /* Make sure our page LSNs make sense */
     if (logseq != logseqfield || nlogseq != nlogseqfield)
     {
       fprintf(stderr, "page %lu invalid (fails log sequence number check)\n", ct);
       return 1;
     }
 
-    /* check old method of checksumming */
+    /* get old method checksums */
     oldcsumfield= mach_read_from_4(p + UNIV_PAGE_SIZE - FIL_PAGE_END_LSN_OLD_CHKSUM);
     noldcsumfield= mach_read_from_4(op + UNIV_PAGE_SIZE - FIL_PAGE_END_LSN_OLD_CHKSUM);
 
 
-    /* now check the new method */
+    /* get new method checksums */
     csumfield= mach_read_from_4(p + FIL_PAGE_SPACE_OR_CHKSUM);
     ncsumfield= mach_read_from_4(op + FIL_PAGE_SPACE_OR_CHKSUM);
+	/* If any of the LSNs or checksums dont make assume we need the newer page */
         if(logseq != nlogseq || oldcsumfield != noldcsumfield || csumfield != ncsumfield) {
                 printf("%lu:%lu:%lu:%lu:%lu\t Is different from \t%lu:%lu:%lu:%lu:%lu\n", ct, logseq, logseqfield,oldcsumfield,csumfield,ct, nlogseq, nlogseqfield,noldcsumfield,ncsumfield);
                 printf("Page start position is %lu\n", pos);
+		/* seek back to the start of this page */
                 fseek(b, -UNIV_PAGE_SIZE, SEEK_CUR);
                 printf("Successfully rewound position to %lu\n", pos);
+		/* write the page from the newer file to the backup */
                 fwrite(p, 1, UNIV_PAGE_SIZE, b);
+		/* we should now be back at the end of the page */
                 pos = ftell(b);
                 printf("Wrote new page and back at %lu\n", pos);
 exit;
