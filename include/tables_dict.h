@@ -10,10 +10,10 @@
 
 // Field limits type
 typedef struct field_limits {
-	// In opposite to field.can_be_null, this field sets 
+	// In opposite to field.can_be_null, this field sets
 	// limit from the data point of view
-	ibool can_be_null; 
-	
+	ibool can_be_null;
+
 	// min and max values for FT_INT fields
 	long long int int_min_val;
 	long long int int_max_val;
@@ -25,14 +25,16 @@ typedef struct field_limits {
 	// min and max string length
 	long long int char_min_len;
 	long long int char_max_len;
-	
+
 	// Should data be forced down to some ASCII sub-set or not
 	ibool char_ascii_only;
 	ibool char_digits_only;
-	
+
+	char* char_regex;
+
 	// Dates validation
 	ibool date_validation;
-	
+
 	// Enum values
 	char *enum_values[MAX_ENUM_VALUES];
 	uint enum_values_count;
@@ -63,14 +65,14 @@ typedef struct field_def {
 	field_type_t type;
 	int min_length;
 	int max_length;
-	
+
 	ibool can_be_null;
 	int fixed_length;
 
     	// For DECIMAL numbers only
 	int decimal_precision;
 	int decimal_digits;
-	
+
 	ibool has_limits;
 	ibool char_rstrip_spaces;
 	field_limits_t limits;
